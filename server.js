@@ -31,24 +31,26 @@ app.use(session({
   cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-const path = require("path");
-
 // ─── SERVE DASHBOARD ─────────────────────────────────────
-// Serves index.html (the AK Artist Intelligence dashboard) at root URL
+// Looks for index.html at root OR in /public folder
 app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(__dirname)); // also serve from root
 
 app.get("/", (req, res) => {
-  const indexPath = path.join(__dirname, "public", "index.html");
   const fs = require("fs");
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
+  // Check /public/index.html first, then root index.html
+  const publicPath = path.join(__dirname, "public", "index.html");
+  const rootPath = path.join(__dirname, "index.html");
+  if (fs.existsSync(publicPath)) {
+    res.sendFile(publicPath);
+  } else if (fs.existsSync(rootPath)) {
+    res.sendFile(rootPath);
   } else {
     res.json({
       status: "ok",
       service: "Wirehouse Media — AK Artist Intelligence Backend",
-      version: "3.0.0",
-      note: "Upload index.html to the /public folder to serve the dashboard here",
-      endpoints: ["/spotify/token","/spotify/artist","/spotify/top-tracks","/chartex/sounds","/airtable/:table","/auth/canva","/auth/google","/google/calendar","/google/drive","/ai/chat"]
+      version: "3.1.0",
+      message: "Upload index.html to GitHub root or /public folder"
     });
   }
 });

@@ -1,6 +1,6 @@
 {
   "name": "ak-intelligence-backend",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "Wirehouse Media — Artist Intelligence Platform Backend",
   "main": "server.js",
   "scripts": {

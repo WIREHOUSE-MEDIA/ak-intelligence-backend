@@ -717,8 +717,35 @@ window.doExport=()=>{
 // ═══════════ AI ASSISTANT ═══════════
 // ═══════════ HEY JESSI — AI Intelligence Assistant ═══════════
 let jessiSonyData = "";
-let jessiMode = "chat"; // chat | coverage | shotlist | copy
 
+  let jessiMode = "chat"; // chat | coverage | shotlist | copy
+// ── JESSI SESSION MANAGEMENT ──
+let jessiSessions=JSON.parse(localStorage.getItem('wm_jessi_sessions')||'[]');
+let jessiCurrentSessionId=null;
+function jessiNewSession(){jessiCurrentSessionId='s'+Date.now();aiHist.length=0;}
+function jessiSaveSession(){
+  if(!aiHist.length||!jessiCurrentSessionId)return;
+  const title=aiHist.find(m=>m.role==='user')?.content?.substring(0,50)||'Session';
+  const idx=jessiSessions.findIndex(s=>s.id===jessiCurrentSessionId);
+  const s={id:jessiCurrentSessionId,title,ts:new Date().toLocaleString(),messages:[...aiHist]};
+  if(idx>=0)jessiSessions[idx]=s;else jessiSessions.unshift(s);
+  jessiSessions=jessiSessions.slice(0,30);
+  localStorage.setItem('wm_jessi_sessions',JSON.stringify(jessiSessions));
+}
+function jessiLoadSession(id){
+  const s=jessiSessions.find(x=>x.id===id);if(!s)return;
+  jessiCurrentSessionId=s.id;
+  aiHist.length=0;s.messages.forEach(m=>aiHist.push(m));
+  const el=document.getElementById('ai-msgs');
+  if(el){el.innerHTML='';aiHist.forEach(m=>{
+    el.innerHTML+=m.role==='user'?`<div class="ai-u">${m.content}</div>`:`<div class="ai-a">${m.content}</div>`;
+  });}
+}
+function jessiBuildClaudeUrl(){
+  const ctx=aiHist.slice(-4).map(m=>`${m.role==='user'?'Me':'Jessi'}: ${m.content.substring(0,150)}`).join('\n\n');
+  return'https://claude.ai/new?q='+encodeURIComponent('Continue this Alicia Keys Hey Jessi session:\n\n'+ctx+'\n\nContinue:');
+}
+  
 function pgAI(){return`
 <div style="display:flex;gap:10px;margin-bottom:11px;align-items:stretch;flex-wrap:wrap">
   <div style="background:linear-gradient(135deg,#c8a96e18,#c8a96e08);border:1px solid #c8a96e2a;border-radius:10px;padding:12px 16px;flex:1;min-width:200px">
@@ -737,6 +764,12 @@ function pgAI(){return`
     <textarea class="inp textarea" id="sony-data" placeholder="Paste your Sony DSRP / streaming report data here… Jessi will include it in coverage reports automatically." style="min-height:70px;font-size:9px;resize:vertical" oninput="jessiSonyData=this.value"></textarea>
     <div style="font-size:9px;color:var(--tx3);margin-top:4px">Paste numbers, percentages, any format</div>
   </div>
+</div>
+
+<div style="display:flex;gap:7px;margin-bottom:9px;align-items:center;flex-wrap:wrap">
+  <button class="btno bsm" onclick="jessiNewSession();document.getElementById('ai-msgs').innerHTML=''">+ New Chat</button>
+  ${jessiSessions.slice(0,5).map(s=>`<button class="chip" onclick="jessiLoadSession('${s.id}')" title="${s.ts}">${s.title.substring(0,30)}…</button>`).join('')}
+  ${aiHist.length?`<a href="${jessiBuildClaudeUrl()}" target="_blank" class="btno bsm" style="text-decoration:none;margin-left:auto">☁️ Save to Claude.ai ↗</a>`:''}
 </div>
 
 <div class="ai-wrap" style="height:calc(100vh - 320px)">
@@ -833,6 +866,7 @@ async function aiSend(){
         <button onclick="go('drafts')" class="btno bsm">→ Content Drafts</button>
       </div>
     </div>`;
+    jessiSaveSession();
   } catch(e){
     if(typing)typing.style.display="none";
     msgs.innerHTML+=`<div class="ai-a" style="color:#f09a9a">Hey Jessi needs Anthropic credits to respond.<br><br>Go to <a href="https://console.anthropic.com/settings/billing" target="_blank" style="color:#69C9D0">console.anthropic.com/settings/billing ↗</a> → Add Credits → $20 gets you ~300-500 reports.<br><br>Then make sure ANTHROPIC_API_KEY is set in your Render environment variables.</div>`;
@@ -1253,6 +1287,11 @@ window.addCreatorToCamp=btn=>{
 
 // ═══════════ CALENDAR — FIXED MODAL ═══════════
 function pgCalendar(){return`
+<div style="display:flex;gap:7px;margin-bottom:9px;flex-wrap:wrap">
+  <a href="https://www.canva.com/planner" target="_blank" class="btn bsm" style="text-decoration:none">🎨 Canva Planner ↗</a>
+  <a href="https://www.canva.com/design-reviews" target="_blank" class="btno bsm" style="text-decoration:none">✅ Design Reviews ↗</a>
+</div>
+
 <div class="an">✅ Click ✦ events to open draft · Approve syncs to Google Calendar · "Design in Canva" opens Canva directly · Con Cora Gala events already synced to jesskim@wirehousemedia.com</div>
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:9px">
   ${Object.entries(TC).map(([k,v])=>`<div style="display:flex;align-items:center;gap:4px"><div style="width:6px;height:6px;border-radius:2px;background:${v}"></div><span style="font-size:9px;color:var(--tx2);text-transform:capitalize;font-weight:700;font-family:'Syne',sans-serif">${k}</span></div>`).join("")}

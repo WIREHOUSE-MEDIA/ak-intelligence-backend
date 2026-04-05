@@ -380,6 +380,29 @@ app.get("/auth/status", (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+// CLOUDSWAY — AI Web Search proxy (avoids CORS from browser)
+// ═══════════════════════════════════════════════════════════
+app.get("/cloudsway/search", async (req, res) => {
+  try {
+    const { q, count = 10 } = req.query;
+    if (!q) return res.status(400).json({ error: "q parameter required" });
+    const CLOUDSWAY_KEY = process.env.CLOUDSWAY_KEY;
+    if (!CLOUDSWAY_KEY) return res.status(500).json({ error: "CLOUDSWAY_KEY not set in Render env vars" });
+    const r = await fetch(`https://aisearchapi.cloudsway.net/api/search/smart?q=${encodeURIComponent(q)}&count=${count}`, {
+      headers: { "Authorization": CLOUDSWAY_KEY, "Content-Type": "application/json" }
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      return res.status(r.status).json({ error: `Cloudsway error: ${txt.substring(0, 200)}` });
+    }
+    const data = await r.json();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
 // AI CHAT — Claude with full AK context
 // ═══════════════════════════════════════════════════════════
 const AK_SYSTEM = `You are "Hey Jessi" — the AI Intelligence Partner for Wirehouse Media's AK Artist Intelligence Platform, built for Alicia Keys. You work like a full digital team combined into one.

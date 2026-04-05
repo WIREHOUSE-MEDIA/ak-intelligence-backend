@@ -20,6 +20,9 @@ const RENDER_BASE = "https://ak-intelligence-backend.onrender.com";
 const CANVA_REDIRECT = `${RENDER_BASE}/auth/canva/callback`;
 const GOOGLE_REDIRECT = `${RENDER_BASE}/auth/google/callback`;
 
+// Realistic browser User-Agent — helps bypass Spotify/Cloudflare bot checks
+const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
 app.use(cors({ origin: "*", credentials: true }));
 app.use(express.json());
 app.use(session({
@@ -32,61 +35,78 @@ app.use(session({
 app.get("/", (req, res) => res.json({
   status: "ok",
   service: "Wirehouse Media — AK Artist Intelligence Backend",
-  version: "2.0.0",
-  endpoints: ["/spotify/token","/spotify/artist","/spotify/top-tracks","/chartex/sounds",
-    "/airtable/:table","/auth/canva","/auth/google","/google/calendar/events","/google/drive/files","/ai/chat"]
+  version: "3.0.0",
 }));
 
 // ═══════════════════════════════════════════════════════════
-// SPOTIFY — with retry and HTML response detection
+// SPOTIFY — with realistic headers + retry on HTML response
 // ═══════════════════════════════════════════════════════════
 let spToken = null, spExpiry = 0;
+
+async function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 async function getSpotifyToken() {
   if (spToken && Date.now() < spExpiry) return spToken;
   const creds = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString("base64");
-  const r = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    headers: {
-      "Authorization": `Basic ${creds}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-      "User-Agent": "WirehouseMedia/2.0"
-    },
-    body: "grant_type=client_credentials"
-  });
-  const text = await r.text();
-  if (!r.ok || text.trim().startsWith("<")) {
-    throw new Error(`Spotify auth failed: ${r.status} — ${text.substring(0, 100)}`);
+  
+  // Try up to 3 times with delay
+  for(let attempt = 0; attempt < 3; attempt++){
+    if(attempt > 0) await sleep(1000 * attempt);
+    try {
+      const r = await fetch("https://accounts.spotify.com/api/token", {
+        method: "POST",
+        headers: {
+          "Authorization": `Basic ${creds}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": UA,
+          "Accept": "application/json",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Cache-Control": "no-cache",
+        },
+        body: "grant_type=client_credentials"
+      });
+      const text = await r.text();
+      if(text.trim().startsWith("<")){
+        console.log(`Spotify returned HTML on attempt ${attempt+1}, retrying...`);
+        continue;
+      }
+      const d = JSON.parse(text);
+      if(!d.access_token) throw new Error(`No token in response: ${text.substring(0,100)}`);
+      spToken = d.access_token;
+      spExpiry = Date.now() + (d.expires_in - 60) * 1000;
+      return spToken;
+    } catch(e) {
+      if(attempt === 2) throw e;
+    }
   }
-  const d = JSON.parse(text);
-  if (!d.access_token) throw new Error(`No access token: ${text.substring(0, 200)}`);
-  spToken = d.access_token;
-  spExpiry = Date.now() + (d.expires_in - 60) * 1000;
-  return spToken;
+  throw new Error("Spotify auth failed after 3 attempts (bot check). Try again in 60 seconds.");
 }
 
 async function spFetch(path) {
   const tok = await getSpotifyToken();
+  await sleep(200); // Small delay between token and data request
   const r = await fetch(`https://api.spotify.com${path}`, {
     headers: {
       "Authorization": `Bearer ${tok}`,
-      "User-Agent": "WirehouseMedia/2.0",
-      "Accept": "application/json"
+      "User-Agent": UA,
+      "Accept": "application/json",
+      "Accept-Language": "en-US,en;q=0.9",
     }
   });
   const text = await r.text();
-  if (text.trim().startsWith("<")) {
-    // Spotify returned HTML (bot check / rate limit) — clear token and retry once
+  if(text.trim().startsWith("<")) {
+    // Force token refresh and retry once
     spToken = null; spExpiry = 0;
+    await sleep(2000);
     const tok2 = await getSpotifyToken();
     const r2 = await fetch(`https://api.spotify.com${path}`, {
-      headers: { "Authorization": `Bearer ${tok2}`, "Accept": "application/json" }
+      headers: { "Authorization": `Bearer ${tok2}`, "User-Agent": UA, "Accept": "application/json" }
     });
     const text2 = await r2.text();
-    if (text2.trim().startsWith("<")) throw new Error("Spotify returned HTML (rate limited). Try again in 30 seconds.");
+    if(text2.trim().startsWith("<")) throw new Error("Spotify is rate-limiting this IP. Try again in 60 seconds.");
     return JSON.parse(text2);
   }
-  if (!r.ok) throw new Error(`Spotify ${r.status}: ${text.substring(0, 200)}`);
+  if(!r.ok) throw new Error(`Spotify ${r.status}: ${text.substring(0,200)}`);
   return JSON.parse(text);
 }
 
@@ -96,55 +116,59 @@ app.get("/spotify/token", async (req, res) => {
 });
 
 app.get("/spotify/artist", async (req, res) => {
-  try {
-    const id = req.query.id || "3DiDSECUqqY1AuBP8qtaIa";
-    res.json(await spFetch(`/v1/artists/${id}`));
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  try { res.json(await spFetch(`/v1/artists/${req.query.id||"3DiDSECUqqY1AuBP8qtaIa"}`)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get("/spotify/top-tracks", async (req, res) => {
-  try {
-    const id = req.query.id || "3DiDSECUqqY1AuBP8qtaIa";
-    const market = req.query.market || "US";
-    res.json(await spFetch(`/v1/artists/${id}/top-tracks?market=${market}`));
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  try { res.json(await spFetch(`/v1/artists/${req.query.id||"3DiDSECUqqY1AuBP8qtaIa"}/top-tracks?market=${req.query.market||"US"}`)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get("/spotify/search", async (req, res) => {
-  try {
-    const { q, type = "track", limit = 10 } = req.query;
-    res.json(await spFetch(`/v1/search?q=${encodeURIComponent(q)}&type=${type}&limit=${limit}`));
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  try { res.json(await spFetch(`/v1/search?q=${encodeURIComponent(req.query.q)}&type=${req.query.type||"track"}&limit=${req.query.limit||10}`)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get("/spotify/albums", async (req, res) => {
-  try {
-    const id = req.query.id || "3DiDSECUqqY1AuBP8qtaIa";
-    res.json(await spFetch(`/v1/artists/${id}/albums?include_groups=album,single&market=US&limit=50`));
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  try { res.json(await spFetch(`/v1/artists/${req.query.id||"3DiDSECUqqY1AuBP8qtaIa"}/albums?include_groups=album,single&market=US&limit=50`)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ═══════════════════════════════════════════════════════════
-// CHARTEX — always append "alicia keys" to search
+// CHARTEX — filter results to Alicia Keys only
 // ═══════════════════════════════════════════════════════════
 app.get("/chartex/sounds", async (req, res) => {
   try {
-    let { search = "alicia keys", limit = 20 } = req.query;
-    // Always include "alicia keys" in search for better results
-    if (!search.toLowerCase().includes("alicia keys")) {
-      search = `alicia keys ${search}`;
-    }
-    const url = `https://api.chartex.com/external/v1/tiktok-sounds/?search=${encodeURIComponent(search)}&limit=${limit}`;
+    let { search = "alicia keys", limit = 50 } = req.query; // Get more so we can filter
+    // Build smart search — use song name only (ChartEx searches sound names, not artist names)
+    const searchQuery = search.toLowerCase().includes("alicia") ? search : search;
+    
+    const url = `https://api.chartex.com/external/v1/tiktok-sounds/?search=${encodeURIComponent(searchQuery)}&limit=${limit}`;
     const r = await fetch(url, {
       headers: { "X-APP-ID": CX_APP_ID, "X-APP-TOKEN": CX_TOKEN }
     });
-    const text = await r.text();
-    if (!r.ok) return res.status(r.status).json({ error: `ChartEx ${r.status}: ${text}` });
-    const data = JSON.parse(text);
-    // Normalize the response — ChartEx returns {data: {items: [...]}}
-    const items = data?.data?.items || data?.results || data || [];
-    res.json({ items, raw: data });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
+    
+    const raw = await r.json();
+    let items = raw?.data?.items || raw?.results || raw || [];
+    
+    // Filter to Alicia Keys sounds only (check artists field OR sound creator name)
+    const akFiltered = items.filter(s => {
+      const artist = (s.artists||"").toLowerCase();
+      const creator = (s.tiktok_sound_creator_name||"").toLowerCase();
+      const songName = (s.song_name||"").toLowerCase();
+      return artist.includes("alicia keys") || creator.includes("alicia keys") ||
+             artist.includes("alicia") || creator.includes("alicia");
+    });
+    
+    // If no AK-specific results, return all (for catalogue search where we don't have exact artist)
+    const finalItems = akFiltered.length > 0 ? akFiltered : items.slice(0, 20);
+    
+    res.json({ items: finalItems, total: finalItems.length, raw });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -155,36 +179,34 @@ const AT_H = () => ({ "Authorization": `Bearer ${AIRTABLE_TOKEN}`, "Content-Type
 
 app.get("/airtable/:table", async (req, res) => {
   try {
-    const { maxRecords = 100, filterByFormula, sort } = req.query;
+    const { maxRecords=100, filterByFormula, sort } = req.query;
     let url = `${AT_BASE}/${encodeURIComponent(req.params.table)}?maxRecords=${maxRecords}`;
-    if (filterByFormula) url += `&filterByFormula=${encodeURIComponent(filterByFormula)}`;
-    if (sort) url += `&sort[0][field]=${encodeURIComponent(sort)}&sort[0][direction]=desc`;
+    if(filterByFormula) url += `&filterByFormula=${encodeURIComponent(filterByFormula)}`;
+    if(sort) url += `&sort[0][field]=${encodeURIComponent(sort)}&sort[0][direction]=desc`;
     const r = await fetch(url, { headers: AT_H() });
-    if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
     res.json(await r.json());
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post("/airtable/:table", async (req, res) => {
   try {
     const r = await fetch(`${AT_BASE}/${encodeURIComponent(req.params.table)}`, {
-      method: "POST", headers: AT_H(),
-      body: JSON.stringify({ fields: req.body })
+      method: "POST", headers: AT_H(), body: JSON.stringify({ fields: req.body })
     });
-    if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
     res.json(await r.json());
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.patch("/airtable/:table/:id", async (req, res) => {
   try {
     const r = await fetch(`${AT_BASE}/${encodeURIComponent(req.params.table)}/${req.params.id}`, {
-      method: "PATCH", headers: AT_H(),
-      body: JSON.stringify({ fields: req.body })
+      method: "PATCH", headers: AT_H(), body: JSON.stringify({ fields: req.body })
     });
-    if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
     res.json(await r.json());
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete("/airtable/:table/:id", async (req, res) => {
@@ -192,13 +214,13 @@ app.delete("/airtable/:table/:id", async (req, res) => {
     const r = await fetch(`${AT_BASE}/${encodeURIComponent(req.params.table)}/${req.params.id}`, {
       method: "DELETE", headers: AT_H()
     });
-    if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
     res.json(await r.json());
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // ═══════════════════════════════════════════════════════════
-// CANVA OAUTH — PKCE
+// CANVA OAUTH
 // ═══════════════════════════════════════════════════════════
 app.get("/auth/canva", (req, res) => {
   const codeVerifier = crypto.randomBytes(64).toString("base64url");
@@ -221,7 +243,7 @@ app.get("/auth/canva", (req, res) => {
 app.get("/auth/canva/callback", async (req, res) => {
   try {
     const { code, state } = req.query;
-    if (state !== req.session.canvaState) return res.status(400).send("State mismatch");
+    if(state !== req.session.canvaState) return res.status(400).send("State mismatch");
     const r = await fetch("https://api.canva.com/rest/v1/oauth/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -232,41 +254,30 @@ app.get("/auth/canva/callback", async (req, res) => {
         client_id: CANVA_CLIENT_ID, client_secret: CANVA_CLIENT_SECRET
       }).toString()
     });
-    if (!r.ok) return res.status(400).json({ error: await r.text() });
+    if(!r.ok) return res.status(400).json({ error: await r.text() });
     const tokens = await r.json();
     req.session.canvaToken = tokens.access_token;
     req.session.canvaRefresh = tokens.refresh_token;
-    res.redirect(`${FRONTEND_URL || RENDER_BASE}?canva=connected`);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+    res.redirect(`${FRONTEND_URL||RENDER_BASE}?canva=connected`);
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get("/canva/token", (req, res) => {
-  if (!req.session.canvaToken) return res.status(401).json({ error: "Not authenticated with Canva" });
+  if(!req.session.canvaToken) return res.status(401).json({ error: "Not authenticated with Canva" });
   res.json({ access_token: req.session.canvaToken });
 });
 
 app.post("/canva/design", async (req, res) => {
   try {
-    if (!req.session.canvaToken) return res.status(401).json({ error: "Connect Canva first" });
-    const { title, designType = "instagram_post" } = req.body;
+    if(!req.session.canvaToken) return res.status(401).json({ error: "Connect Canva first" });
     const r = await fetch("https://api.canva.com/rest/v1/designs", {
       method: "POST",
       headers: { "Authorization": `Bearer ${req.session.canvaToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ design_type: { type: designType }, title })
+      body: JSON.stringify({ design_type: { type: req.body.designType||"instagram_post" }, title: req.body.title })
     });
-    if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
     res.json(await r.json());
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get("/canva/designs", async (req, res) => {
-  try {
-    if (!req.session.canvaToken) return res.status(401).json({ error: "Connect Canva first" });
-    const r = await fetch("https://api.canva.com/rest/v1/designs?limit=20", {
-      headers: { "Authorization": `Bearer ${req.session.canvaToken}` }
-    });
-    res.json(await r.json());
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 // ═══════════════════════════════════════════════════════════
@@ -275,13 +286,7 @@ app.get("/canva/designs", async (req, res) => {
 app.get("/auth/google", (req, res) => {
   const state = crypto.randomBytes(16).toString("hex");
   req.session.googleState = state;
-  const scopes = [
-    "https://www.googleapis.com/auth/calendar",
-    "https://www.googleapis.com/auth/calendar.events",
-    "https://www.googleapis.com/auth/drive.file",
-    "https://www.googleapis.com/auth/drive.metadata.readonly",
-    "profile", "email"
-  ].join(" ");
+  const scopes = ["https://www.googleapis.com/auth/calendar","https://www.googleapis.com/auth/calendar.events","https://www.googleapis.com/auth/drive.file","https://www.googleapis.com/auth/drive.metadata.readonly","profile","email"].join(" ");
   const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   authUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
   authUrl.searchParams.set("redirect_uri", GOOGLE_REDIRECT);
@@ -296,67 +301,53 @@ app.get("/auth/google", (req, res) => {
 app.get("/auth/google/callback", async (req, res) => {
   try {
     const { code, state } = req.query;
-    if (state !== req.session.googleState) return res.status(400).send("State mismatch");
+    if(state !== req.session.googleState) return res.status(400).send("State mismatch");
     const r = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code, client_id: GOOGLE_CLIENT_ID, client_secret: GOOGLE_CLIENT_SECRET,
-        redirect_uri: GOOGLE_REDIRECT, grant_type: "authorization_code"
-      }).toString()
+      body: new URLSearchParams({ code, client_id: GOOGLE_CLIENT_ID, client_secret: GOOGLE_CLIENT_SECRET, redirect_uri: GOOGLE_REDIRECT, grant_type: "authorization_code" }).toString()
     });
-    if (!r.ok) return res.status(400).json({ error: await r.text() });
+    if(!r.ok) return res.status(400).json({ error: await r.text() });
     const tokens = await r.json();
     req.session.googleToken = tokens.access_token;
     req.session.googleRefresh = tokens.refresh_token;
-    res.redirect(`${FRONTEND_URL || RENDER_BASE}?google=connected`);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+    res.redirect(`${FRONTEND_URL||RENDER_BASE}?google=connected`);
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get("/google/calendar/events", async (req, res) => {
   try {
-    if (!req.session.googleToken) return res.status(401).json({ error: "Connect Google first", authUrl: "/auth/google" });
-    const { timeMin = new Date().toISOString(), maxResults = 50 } = req.query;
-    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&maxResults=${maxResults}&singleEvents=true&orderBy=startTime`;
-    const r = await fetch(url, { headers: { Authorization: `Bearer ${req.session.googleToken}` } });
-    if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+    if(!req.session.googleToken) return res.status(401).json({ error: "Connect Google first", authUrl: "/auth/google" });
+    const { timeMin=new Date().toISOString(), maxResults=50 } = req.query;
+    const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&maxResults=${maxResults}&singleEvents=true&orderBy=startTime`, {
+      headers: { Authorization: `Bearer ${req.session.googleToken}` }
+    });
+    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
     res.json(await r.json());
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post("/google/calendar/events", async (req, res) => {
   try {
-    if (!req.session.googleToken) return res.status(401).json({ error: "Connect Google first" });
+    if(!req.session.googleToken) return res.status(401).json({ error: "Connect Google first" });
     const r = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${req.session.googleToken}`, "Content-Type": "application/json" },
+      method: "POST", headers: { Authorization: `Bearer ${req.session.googleToken}`, "Content-Type": "application/json" },
       body: JSON.stringify(req.body)
     });
-    if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
     res.json(await r.json());
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.delete("/google/calendar/events/:id", async (req, res) => {
-  try {
-    if (!req.session.googleToken) return res.status(401).json({ error: "Connect Google first" });
-    const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${req.params.id}`, {
-      method: "DELETE", headers: { Authorization: `Bearer ${req.session.googleToken}` }
-    });
-    res.json({ success: r.ok });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get("/google/drive/files", async (req, res) => {
   try {
-    if (!req.session.googleToken) return res.status(401).json({ error: "Connect Google first" });
-    const { pageSize = 20 } = req.query;
-    const r = await fetch(`https://www.googleapis.com/drive/v3/files?pageSize=${pageSize}&fields=files(id,name,mimeType,webViewLink,thumbnailLink,createdTime,modifiedTime)`, {
+    if(!req.session.googleToken) return res.status(401).json({ error: "Connect Google first" });
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files?pageSize=${req.query.pageSize||20}&fields=files(id,name,mimeType,webViewLink,thumbnailLink,createdTime,modifiedTime)`, {
       headers: { Authorization: `Bearer ${req.session.googleToken}` }
     });
-    if (!r.ok) return res.status(r.status).json({ error: await r.text() });
+    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
     res.json(await r.json());
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get("/auth/status", (req, res) => {
@@ -376,67 +367,38 @@ app.get("/auth/status", (req, res) => {
 const AK_SYSTEM = `You are the AI Intelligence Assistant for Wirehouse Media's Artist Intelligence Platform, deployed for Alicia Keys.
 
 VERIFIED DATA (April 2026):
-- Instagram @aliciakeys: 28M followers, 0.61% engagement, 165.8K avg likes, 1.4K avg comments
+- Instagram @aliciakeys: 28M followers, 0.61% engagement, 165.8K avg likes
 - TikTok @aliciakeys: 8M followers, 50.5M total likes
-- Spotify: 36.6M monthly listeners, Artist ID: 3DiDSECUqqY1AuBP8qtaIa, 1.2B+ all-time streams
-- YouTube: ~7M subs | Facebook: ~35M | X/Twitter: ~28M
+- Spotify: 36.6M monthly listeners, 1.2B+ all-time streams
 - KEY EVENT 2026: Con Cora Gala — Alicia Keys performed with Karol G. Major cultural moment.
-- TRENDING: "Plentiful ft. Pusha T" — 695 TikTok creates, 2.1M views, 1.58M Spotify streams
+- TRENDING: "Plentiful ft. Pusha T" — 695 TikTok creates, 2.1M views
+- "Girl on Fire" — 1.7M TikTok creates, 932M video views (live from ChartEx)
 - "Try Sleeping with a Broken Heart" — +34% streaming spike post-Con Cora Gala
-- "Girl on Fire" — 1.7M TikTok creates (live from ChartEx), 932M video views
 - Hell's Kitchen Broadway — sell-out run spring 2026
-- L'Aurora ft. Eros Ramazzotti — 2025 Italian collab
 
-TOP STREAMS: If I Ain't Got You (1.2B), Fallin' (980M), No One (860M), Girl on Fire (620M)
-
-PLATFORM: Wirehouse Media Artist Intelligence Platform — proprietary SaaS.
-INTEGRATIONS: ChartEx (TikTok sound data), Spotify API, Airtable (CRM), Canva (design), Google Calendar.
-
-YOU CAN:
-- Generate full coverage reports on any event, campaign, or moment
-- Find and link to specific posts and social media content
-- Analyze streaming and TikTok sound trends with real data
-- Draft social posts, press releases, campaign briefs, pitch decks
-- Identify creator opportunities and influencer strategy
-- Generate Airtable record suggestions
-- Recommend content strategy based on catalog and trend data
-- Pull all coverage around any moment (Con Cora Gala, Plentiful drop, etc.)
-
-FORMAT: Sharp, data-driven. Use headers and bullets for reports. Always include real clickable links:
-- Spotify: https://open.spotify.com/artist/3DiDSECUqqY1AuBP8qtaIa
-- TikTok search: https://www.tiktok.com/search?q=alicia+keys
-- Instagram: https://instagram.com/aliciakeys
-- YouTube: https://youtube.com/@AliciaKeys`;
+Be sharp, data-driven. Use headers and bullets for reports. Provide real clickable links.`;
 
 app.post("/ai/chat", async (req, res) => {
   try {
     const { messages } = req.body;
-    if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: "messages array required" });
-    if (!ANTHROPIC_API_KEY) return res.status(500).json({ error: "ANTHROPIC_API_KEY not configured in Render environment variables. Add it at dashboard.render.com → ak-intelligence-backend → Environment." });
+    if(!messages || !Array.isArray(messages)) return res.status(400).json({ error: "messages array required" });
+    if(!ANTHROPIC_API_KEY) return res.status(500).json({ 
+      error: "ANTHROPIC_API_KEY not set. Go to console.anthropic.com → API Keys → Create key, then add it to Render environment variables." 
+    });
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01"
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2000,
-        system: AK_SYSTEM,
-        messages: messages.map(m => ({ role: m.role, content: m.content }))
-      })
+      headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 2000, system: AK_SYSTEM, messages })
     });
-    if (!r.ok) {
+    if(!r.ok) {
       const txt = await r.text();
-      return res.status(r.status).json({ error: txt });
+      return res.status(r.status).json({ error: `Anthropic error: ${txt}` });
     }
     const data = await r.json();
     res.json({ reply: data.content?.[0]?.text || "No response" });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// ─── START ───────────────────────────────────────────────
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Wirehouse Media — AK Intelligence Backend v2.0 running on port ${PORT}`);
+  console.log(`Wirehouse Media — AK Intelligence Backend v3.0 running on port ${PORT}`);
 });

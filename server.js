@@ -424,13 +424,13 @@ app.post("/ai/chat", async (req, res) => {
   try {
     const { messages } = req.body;
     if(!messages || !Array.isArray(messages)) return res.status(400).json({ error: "messages array required" });
-    if(!ANTHROPIC_API_KEY) return res.status(500).json({ 
-      error: "ANTHROPIC_API_KEY not set. Go to console.anthropic.com → API Keys → Create key, then add it to Render environment variables." 
+    if(!ANTHROPIC_API_KEY=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) return res.status(500).json({ 
+
     });
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 2000, system: AK_SYSTEM, messages })
+      body: JSON.stringify({ model: claude-haiku-4-5-20251001", max_tokens: 2000, system: AK_SYSTEM, messages })
     });
     if(!r.ok) {
       const txt = await r.text();

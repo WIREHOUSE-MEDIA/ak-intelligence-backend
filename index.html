@@ -29,25 +29,37 @@
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--tx);font-family:'DM Mono',monospace}
 #app{display:flex;flex-direction:column;height:100vh}
-.hdr{height:52px;background:rgba(5,5,13,.97);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 18px;gap:12px;flex-shrink:0;z-index:50}
+.hdr{height:52px;background:var(--bg);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 12px 0 46px;gap:8px;flex-shrink:0;z-index:50}
 .logo-l{display:flex;align-items:center;gap:7px;flex-shrink:0}
 .logo-ak{font-family:'Syne',sans-serif;font-size:11px;font-weight:800;letter-spacing:.25em;color:var(--purple)}
 .logo-nm{font-family:'Playfair Display',serif;font-size:15px;color:var(--tx);font-style:italic}
 .logo-nm span{color:var(--purple);font-style:normal}
-.htabs{display:flex;gap:1px;flex:1;overflow-x:auto;scrollbar-width:none}
+.htabs{display:flex;gap:1px;flex:1;overflow-x:auto;scrollbar-width:none;min-width:0}
 .htabs::-webkit-scrollbar{display:none}
 .htab{padding:4px 10px;border-radius:5px;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-family:'Syne',sans-serif;border:1px solid transparent;background:transparent;color:var(--tx3);cursor:pointer;white-space:nowrap;transition:all .14s}
 .htab.on{background:var(--gd);color:var(--purple);border-color:#a07fd42a}
 .hdr-r{font-family:'Syne',sans-serif;font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--tx3);flex-shrink:0;text-transform:uppercase}
 .body{display:flex;flex:1;overflow:hidden;position:relative}
-.sidebar{width:166px;border-right:1px solid var(--bdr);background:var(--bg2);overflow-y:auto;flex-shrink:0;scrollbar-width:none;transition:width .2s ease}
+.sidebar{width:166px;border-right:1px solid var(--bdr);background:var(--bg2);overflow-y:auto;flex-shrink:0;scrollbar-width:none;transition:width .22s ease;display:flex;flex-direction:column;position:relative}
+.sidebar::-webkit-scrollbar{display:none}
 .sidebar.collapsed{width:36px;overflow:hidden}
 .sidebar.collapsed .sg{display:none}
 .sidebar.collapsed .si span:not(.ico){display:none}
 .sidebar.collapsed .si{padding:8px 0;justify-content:center}
-.sidebar.collapsed .si .ico{opacity:.6;width:auto}
-.sb-toggle{position:absolute;bottom:12px;left:0;width:36px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tx3);font-size:14px;transition:color .14s;z-index:10}
-.sb-toggle:hover{color:var(--purple)}
+.sidebar.collapsed .si .ico{opacity:.7;width:auto}
+.sidebar.collapsed .sb-bottom{padding:6px 0}
+.sidebar.collapsed #theme-btn{font-size:13px;padding:4px 0;width:100%}
+.sb-bottom{margin-top:auto;padding:10px 10px 10px;border-top:1px solid var(--bdr);flex-shrink:0}
+#theme-btn{background:none;border:1px solid var(--bdr);border-radius:6px;color:var(--tx2);cursor:pointer;padding:5px 8px;font-size:11px;width:100%;transition:all .14s;text-align:left;display:flex;align-items:center;gap:6px}
+#theme-btn:hover{border-color:var(--purple);color:var(--purple)}
+.sb-toggle{position:fixed;top:12px;left:10px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--tx2);font-size:14px;transition:color .14s,border-color .14s;z-index:500;background:var(--bg);border:1px solid var(--bdr);border-radius:6px;line-height:1;flex-shrink:0}
+.sb-toggle:hover{color:var(--purple);border-color:var(--purple)}
+@media(max-width:600px){
+  .sidebar{width:0;overflow:hidden;position:fixed;height:100vh;top:0;left:0;z-index:200;box-shadow:4px 0 28px rgba(0,0,0,.6)}
+  .sidebar.mob-open{width:166px;overflow-y:auto}
+  .htabs{display:flex}
+  .hdr-r{font-size:8px;letter-spacing:.08em}
+}
 .sidebar::-webkit-scrollbar{display:none}
 .sg{padding:14px 13px 3px;font-size:8px;color:var(--tx3);letter-spacing:.2em;text-transform:uppercase;font-weight:700;font-family:'Syne',sans-serif}
 .si{padding:8px 13px;font-size:9px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;font-family:'Syne',sans-serif;color:var(--tx3);border-left:2px solid transparent;cursor:pointer;transition:all .11s;display:flex;align-items:center;gap:8px}
@@ -117,6 +129,9 @@ select.ec option{background:var(--bg2)}
 .camp-hdr{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bdr);margin-bottom:8px;cursor:pointer}
 .camp-hdr:hover{opacity:.8}
 .pg{animation:pgIn .2s ease}
+.drive-bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 14px;margin-top:14px;background:var(--bg2);border:1px solid var(--bdr);border-radius:9px;position:sticky;bottom:10px;z-index:20;backdrop-filter:blur(8px)}
+@keyframes fadeInUp{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes fadeInUp{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
 @keyframes pgIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 ::-webkit-scrollbar{width:3px;height:3px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -138,11 +153,10 @@ select.ec option{background:var(--bg2)}
   <div class="hdr">
     <div class="logo-l"><span class="logo-ak">AK</span><span class="logo-nm">Artist <span>Intelligence</span></span></div>
     <div class="htabs" id="htabs"></div>
-    <button id="theme-btn" onclick="toggleTheme()" style="background:none;border:1px solid var(--bdr);border-radius:6px;color:var(--tx2);cursor:pointer;padding:4px 8px;font-size:11px;margin-right:6px;transition:all .14s" title="Toggle light/dark mode">☀️</button>
-<div class="hdr-r">Wirehouse Media</div>
+    <div class="hdr-r">Wirehouse Media</div>
   </div>
   <div class="body">
-    <div class="sidebar" id="sidebar"></div><div class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()" title="Toggle navigation">◀</div>
+    <div class="sidebar" id="sidebar"><div class="sb-bottom"><button id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark mode">☀️</button></div></div><button class="sb-toggle" id="sb-toggle" onclick="toggleSidebar()" title="Collapse navigation">◀</button>
     <div class="main" id="main"></div>
   </div>
 </div>
@@ -183,35 +197,113 @@ let CUR="overview";
 // ── THEME TOGGLE ──
 let _theme = localStorage.getItem('wm_theme') || 'dark';
 function applyTheme(t){
-  _theme = t;
-  document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : '');
-  const btn = document.getElementById('theme-btn');
-  if(btn) btn.textContent = t === 'light' ? '🌙' : '☀️';
-  localStorage.setItem('wm_theme', t);
+  _theme=t;
+  if(t==='light'){document.documentElement.setAttribute('data-theme','light');}
+  else{document.documentElement.removeAttribute('data-theme');}
+  buildNav(); // rebuilds sidebar + re-appends theme btn with correct label
+  localStorage.setItem('wm_theme',t);
 }
-window.toggleTheme = () => applyTheme(_theme === 'dark' ? 'light' : 'dark');
+window.toggleTheme=()=>applyTheme(_theme==='dark'?'light':'dark');
 
 let sidebarCollapsed=false;
+const isMobile=()=>window.innerWidth<=600;
 window.toggleSidebar=()=>{
-  sidebarCollapsed=!sidebarCollapsed;
   const sb=document.getElementById('sidebar');
   const btn=document.getElementById('sb-toggle');
-  if(sb)sb.classList.toggle('collapsed',sidebarCollapsed);
-  if(btn)btn.textContent=sidebarCollapsed?'▶':'◀';
-  // Update toggle position
-  if(btn)btn.style.left=sidebarCollapsed?'0':'';
+  if(isMobile()){
+    const open=sb.classList.toggle('mob-open');
+    if(btn)btn.textContent=open?'✕':'☰';
+    if(open){
+      setTimeout(()=>{
+        const close=(e)=>{
+          if(!sb.contains(e.target)&&e.target!==btn){
+            sb.classList.remove('mob-open');
+            if(btn)btn.textContent='☰';
+            document.removeEventListener('click',close);
+          }
+        };
+        document.addEventListener('click',close);
+      },100);
+    }
+  } else {
+    sidebarCollapsed=!sidebarCollapsed;
+    if(sb)sb.classList.toggle('collapsed',sidebarCollapsed);
+    // Button stays fixed at left:12px always — just update icon
+    if(btn)btn.textContent=sidebarCollapsed?'▶':'◀';
+  }
 };
+window.addEventListener('load',()=>{
+  const btn=document.getElementById('sb-toggle');
+  if(isMobile()&&btn)btn.textContent='☰';
+});
+window.addEventListener('resize',()=>{
+  const sb=document.getElementById('sidebar');
+  const btn=document.getElementById('sb-toggle');
+  if(!sb||!btn)return;
+  if(!isMobile()){
+    sb.classList.remove('mob-open');
+    btn.textContent=sidebarCollapsed?'▶':'◀';
+  } else {
+    sb.classList.remove('collapsed');
+    if(!sb.classList.contains('mob-open'))btn.textContent='☰';
+  }
+});
 function buildNav(){
   const all=NAV.flatMap(g=>g.items);
   document.getElementById("htabs").innerHTML=all.map(({id,l})=>`<button class="htab ${id===CUR?"on":""}" onclick="go('${id}')">${l}</button>`).join("");
-  document.getElementById("sidebar").innerHTML=NAV.map(({g,items})=>`<div class="sg">${g}</div>${items.map(({id,l,i})=>`<div class="si ${id===CUR?"on":""}" onclick="go('${id}')"><span class="ico">${i}</span>${l}</div>`).join("")}`).join("");
+  const sb=document.getElementById("sidebar");
+  sb.innerHTML=NAV.map(({g,items})=>`<div class="sg">${g}</div>${items.map(({id,l,i})=>`<div class="si ${id===CUR?"on":""}" onclick="go('${id}')"><span class="ico">${i}</span>${l}</div>`).join("")}`).join("");
+  // Always re-append theme toggle at bottom of sidebar
+  const isDark=_theme!=="light";
+  sb.insertAdjacentHTML("beforeend",`<div class="sb-bottom" style="margin-top:auto;padding:10px;border-top:1px solid var(--bdr);flex-shrink:0"><button id="theme-btn" onclick="toggleTheme()" style="background:none;border:1px solid var(--bdr);border-radius:6px;color:var(--tx2);cursor:pointer;padding:6px 9px;font-size:11px;width:100%;display:flex;align-items:center;gap:7px;transition:all .14s" onmouseover="this.style.borderColor='var(--purple)';this.style.color='var(--purple)'" onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--tx2)'">${isDark?'&#9728;&#xFE0F; <span style="font-size:9px;font-family:Syne,sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Light Mode</span>':'&#127769; <span style="font-size:9px;font-family:Syne,sans-serif;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Dark Mode</span>'}</button></div>`);
+  if(sidebarCollapsed)sb.classList.add("collapsed");
 }
 window.go=id=>{CUR=id;buildNav();renderPage()};
 function renderPage(){
   const p=NAV.flatMap(g=>g.items).find(x=>x.id===CUR)||NAV[0].items[0];
-  document.getElementById("main").innerHTML=`<div class="pt">${p.l}</div><div class="ps">Alicia Keys · Wirehouse Media</div><div class="pg">${getPage(CUR)}</div>`;
+  document.getElementById("main").innerHTML=
+    `<div class="pt">${p.l}</div>`+
+    `<div class="ps">Alicia Keys · Wirehouse Media</div>`+
+    `<div class="pg">${getPage(CUR)}</div>`+
+    buildDriveBar(CUR);
   afterRender(CUR);
 }
+
+function buildDriveBar(pageId){
+  function dBtn(lbl,fn){return '<button data-fn="'+fn+'" class="drive-btn-doc" style="padding:5px 10px;border-radius:6px;font-size:9px;font-weight:700;font-family:Syne,sans-serif;cursor:pointer;border:1px solid #4285F433;background:none;color:#4285F4;letter-spacing:.06em;text-transform:uppercase">&#128196; '+lbl+'</button>';}
+  function sBtn(lbl,fn){return '<button data-fn="'+fn+'" class="drive-btn-sheet" style="padding:5px 10px;border-radius:6px;font-size:9px;font-weight:700;font-family:Syne,sans-serif;cursor:pointer;border:1px solid #0F9D5833;background:none;color:#0F9D58;letter-spacing:.06em;text-transform:uppercase">&#128202; '+lbl+'</button>';}
+  var btns={
+    overview:  dBtn('Save Overview','exportPageToDrive("overview")')+sBtn('Stats Sheet','exportPageToDrive("overview","sheet")'),
+    platforms: dBtn('Platforms Doc','exportPageToDrive("platforms")')+sBtn('Platforms Sheet','exportPageToDrive("platforms","sheet")'),
+    dsp:       dBtn('DSP Report','exportPageToDrive("dsp")')+sBtn('DSP Sheet','exportPageToDrive("dsp","sheet")'),
+    catalogue: sBtn('Catalogue Sheet','exportPageToDrive("catalogue","sheet")')+dBtn('Catalogue Doc','exportPageToDrive("catalogue")'),
+    chartex:   dBtn('ChartEx Session','exportPageToDrive("chartex")'),
+    campaignreport: dBtn('Campaign Report Doc','exportPageToDrive("campaignreport")')+sBtn('Report Sheet','exportPageToDrive("campaignreport","sheet")'),
+    viral:     dBtn('Viral Formulas','exportPageToDrive("viral")'),
+    listening: dBtn('Listening Report','exportPageToDrive("listening")'),
+    ai:        dBtn('Jessi Chat Doc','exportJessiToDrive("doc")')+sBtn('Chat to Sheet','exportJessiToDrive("sheet")'),
+    campaigns: dBtn('Campaigns Doc','exportAllCampaignsToDrive("doc")')+sBtn('Campaigns Sheet','exportAllCampaignsToDrive()'),
+    crm:       sBtn('CRM Sheet','exportCRMToDrive()')+dBtn('CRM Report Doc','exportCRMReportToDrive()'),
+    budget:    sBtn('Budget Sheet','exportBudgetToDrive()')+dBtn('Budget Report','exportPageToDrive("budget")'),
+    calendar:  dBtn('Calendar Doc','exportPageToDrive("calendar")')+sBtn('Events Sheet','exportCalendarToDrive()'),
+    drafts:    dBtn('All Drafts Doc','exportAllDraftsToDrive()'),
+    contracts: sBtn('Contracts Sheet','exportContractsToDrive()')+dBtn('Contracts Doc','exportPageToDrive("contracts")'),
+    partners:  dBtn('Partners Doc','exportPageToDrive("partners")')+sBtn('Airtable Sheet','exportAirtableToDrive("Creators")'),
+  };
+  var b=btns[pageId]||dBtn('Save This Page','exportPageToDrive("'+pageId+'")');
+  var fullBtn='<button data-fn="exportPageToDrive(\"all\")" class="drive-btn-doc" style="padding:5px 10px;border-radius:6px;font-size:9px;font-weight:700;font-family:Syne,sans-serif;cursor:pointer;border:1px solid #2a1f42;background:none;color:#4a3868;margin-left:auto;letter-spacing:.06em;text-transform:uppercase">&#128193; Full Export</button>';
+  return '<div class="drive-bar">'+
+    '<span style="font-size:9px;color:#9080b0;font-family:Syne,sans-serif;font-weight:700;letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">&#128190; Google Drive</span>'+
+    b+fullBtn+'</div>';
+}
+// Drive bar event delegation
+document.addEventListener('click',function(e){
+  var btn=e.target.closest('.drive-btn-doc,.drive-btn-sheet');
+  if(!btn)return;
+  var fn=btn.getAttribute('data-fn');
+  if(fn)try{eval(fn);}catch(err){showGDriveToast('Error: '+err.message);}
+});
+
 window.closeModal=()=>{document.getElementById("mroot").innerHTML=""};
 
 // ── Universal link preview helper ──
@@ -1231,8 +1323,27 @@ Switch modes using the sidebar buttons to access mode-specific prompts and saved
           </div>
         </div>
       </div>
+      <!-- Upload row -->
+      <div style="display:flex;gap:5px;margin-bottom:6px;flex-wrap:wrap">
+        <label style="padding:5px 9px;border-radius:7px;border:1px solid var(--bdr);background:none;color:var(--tx2);font-family:'Syne',sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap">
+          📷 Screenshot / Image
+          <input type="file" accept="image/*" style="display:none" onchange="handleJessiImage(this)">
+        </label>
+        <label style="padding:5px 9px;border-radius:7px;border:1px solid var(--bdr);background:none;color:var(--tx2);font-family:'Syne',sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap">
+          🎙 Voice Note
+          <input type="file" accept="audio/*" style="display:none" onchange="handleJessiVoice(this)">
+        </label>
+        <button id="record-btn" onclick="toggleRecording()" style="padding:5px 9px;border-radius:7px;border:1px solid var(--bdr);background:none;color:var(--tx2);font-family:'Syne',sans-serif;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap">🔴 Record</button>
+        <button onclick="toggleDataPanel()" style="padding:5px 9px;border-radius:7px;border:1px solid var(--bdr);background:none;color:var(--tx2);font-family:'Syne',sans-serif;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap">📊 Sony / Luminate Data</button>
+      </div>
+      <!-- Data paste panel (hidden by default) -->
+      <div id="data-panel" style="display:none;margin-bottom:6px">
+        <textarea class="inp" id="luminate-data" placeholder="Paste Sony DSRP, Luminate export, ChartMetric CSV, or any data here. Jessi will read it alongside your message." style="width:100%;min-height:70px;font-size:9px;resize:vertical"></textarea>
+      </div>
+      <!-- Attachment preview -->
+      <div id="jessi-attachments" style="display:none;margin-bottom:6px;flex-wrap:wrap;gap:6px"></div>
       <div style="display:flex;gap:8px">
-        <input class="inp" id="ai-inp" placeholder="Ask Jessi anything — reports, copy, shotlists, strategy, outreach…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiSend()}">
+        <input class="inp" id="ai-inp" placeholder="Ask Jessi anything — or upload a screenshot, voice note, or data above…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiSend()}">
         <button class="btn" onclick="aiSend()" style="white-space:nowrap">Send ✦</button>
       </div>
       <div style="font-size:9px;color:var(--tx3);margin-top:5px">$20 Anthropic credits ≈ 300-500 full reports · console.anthropic.com/settings/billing</div>
@@ -1265,40 +1376,188 @@ window.setJessiMode=(m,silent)=>{
   if(!silent)renderJessiSessions();
 };
 
-async function aiSend(){
-  const inp=document.getElementById("ai-inp");
-  const q=inp?.value?.trim();if(!q)return;inp.value="";
-  const msgs=document.getElementById("ai-msgs"),typing=document.getElementById("ai-typing");
-  if(!msgs)return;
-  msgs.innerHTML+=`<div class="ai-u">${q}</div>`;
-  if(typing)typing.style.display="flex";
-  msgs.scrollTop=msgs.scrollHeight;
-  const contextMsg=q+buildJessiContext();
-  try{
-    aiHist.push({role:"user",content:contextMsg});
-    const d=await apicall("/ai/chat",{method:"POST",body:JSON.stringify({messages:aiHist})});
-    aiHist.push({role:"assistant",content:d.reply});
-    if(typing)typing.style.display="none";
-    const fmt2=formatAIResponse(d.reply);
-    msgs.innerHTML+=`<div class="ai-a">${fmt2}
-      <div style="display:flex;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid var(--bdr);flex-wrap:wrap">
-        <button onclick="copyAIResponse(this)" class="btno bsm">📋 Copy</button>
-        <button onclick="saveAsDoc(this)" class="btno bsm">💾 Save Draft</button>
-        <button onclick="go('campaigns');setTimeout(()=>alert('Paste Jessi output into campaign notes'),200)" class="btno bsm">→ Campaign</button>
-        <button onclick="go('crm')" class="btno bsm">→ CRM</button>
-        <button onclick="go('calendar')" class="btno bsm">→ Calendar</button>
-      </div>
-    </div>`;
-    jessiSaveSession();
-    const cl=document.getElementById("jessi-claude-link");
-    if(cl)cl.href=jessiBuildClaudeUrl();
-  }catch(e){
-    if(typing)typing.style.display="none";
-    msgs.innerHTML+=`<div class="ai-a" style="color:#f09a9a">Hey Jessi needs Anthropic credits.<br>Go to <a href="https://console.anthropic.com/settings/billing" target="_blank" style="color:#69C9D0">console.anthropic.com/settings/billing ↗</a> → Add $20 credits.<br>Also confirm ANTHROPIC_API_KEY is set in Render environment variables.</div>`;
+// ── Hey Jessi — image, voice, data upload handlers ──
+let jessiImages = []; // base64 images to include in next message
+let jessiVoiceText = ''; // transcribed voice text
+let mediaRecorder = null;
+let recordingChunks = [];
+let isRecording = false;
+
+window.handleJessiImage = (input) => {
+  const files = input.files;
+  if(!files || !files.length) return;
+  const att = document.getElementById('jessi-attachments');
+  if(att) {att.style.display='flex';}
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const b64 = e.target.result;
+      jessiImages.push({type: file.type, data: b64, name: file.name});
+      if(att) {
+        const thumb = document.createElement('div');
+        thumb.style.cssText = 'position:relative;display:inline-block';
+        thumb.innerHTML = '<img src="'+b64+'" style="height:60px;border-radius:6px;border:1px solid var(--bdr);object-fit:cover">'+
+          '<div style="font-size:9px;color:var(--tx2);text-align:center;margin-top:2px">'+file.name.substring(0,20)+'</div>'+
+          '<button onclick="removeJessiImg(this)" style="position:absolute;top:-4px;right:-4px;background:#f09a9a;border:none;border-radius:50%;width:16px;height:16px;cursor:pointer;font-size:10px;line-height:1;color:#000">×</button>';
+        att.appendChild(thumb);
+      }
+      showGDriveToast('📷 Screenshot added — it will be included in your next Jessi message');
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+};
+
+window.removeJessiImg = (btn) => {
+  const thumb = btn.parentElement;
+  const idx = Array.from(thumb.parentElement.children).indexOf(thumb);
+  jessiImages.splice(idx, 1);
+  thumb.remove();
+  const att = document.getElementById('jessi-attachments');
+  if(att && !att.children.length) att.style.display = 'none';
+};
+
+window.handleJessiVoice = (input) => {
+  const file = input.files[0];
+  if(!file) return;
+  showGDriveToast('🎙 Voice note added — Jessi will transcribe and respond to it');
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    jessiVoiceText = '[Voice note uploaded: '+file.name+' ('+Math.round(file.size/1024)+'KB) — please transcribe and respond to the audio content]';
+    const inp = document.getElementById('ai-inp');
+    if(inp && !inp.value) inp.value = jessiVoiceText;
+    const att = document.getElementById('jessi-attachments');
+    if(att) {
+      att.style.display = 'flex';
+      const chip = document.createElement('div');
+      chip.style.cssText = 'padding:5px 10px;background:var(--purple-dim);border:1px solid var(--bdr);border-radius:6px;font-size:10px;color:var(--purple)';
+      chip.textContent = '🎙 '+file.name;
+      att.appendChild(chip);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value = '';
+};
+
+window.toggleRecording = async () => {
+  const btn = document.getElementById('record-btn');
+  if(!isRecording) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      mediaRecorder = new MediaRecorder(stream);
+      recordingChunks = [];
+      mediaRecorder.ondataavailable = e => recordingChunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordingChunks, {type:'audio/webm'});
+        const url = URL.createObjectURL(blob);
+        const inp = document.getElementById('ai-inp');
+        if(inp) inp.value = '[Voice recording attached — please respond to what was said]';
+        const att = document.getElementById('jessi-attachments');
+        if(att) {
+          att.style.display = 'flex';
+          att.innerHTML += '<audio controls src="'+url+'" style="height:32px;border-radius:6px"></audio>';
+        }
+        stream.getTracks().forEach(t=>t.stop());
+        showGDriveToast('🎙 Recording complete — send your message to Jessi');
+      };
+      mediaRecorder.start();
+      isRecording = true;
+      if(btn) {btn.textContent='⏹ Stop';btn.style.color='#f09a9a';btn.style.borderColor='#f09a9a33';}
+    } catch(e) {
+      showGDriveToast('Microphone access needed — allow in browser settings');
+    }
+  } else {
+    if(mediaRecorder) mediaRecorder.stop();
+    isRecording = false;
+    if(btn) {btn.textContent='🔴 Record';btn.style.color='';btn.style.borderColor='';}
   }
-  msgs.scrollTop=msgs.scrollHeight;
+};
+
+window.toggleDataPanel = () => {
+  const panel = document.getElementById('data-panel');
+  if(!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+};
+
+// ── Override aiSend to include images + data ──
+async function aiSend(){
+  const inp = document.getElementById('ai-inp');
+  const q = inp?.value?.trim();
+  if(!q && !jessiImages.length && !jessiVoiceText) return;
+  if(inp) inp.value = '';
+
+  // Include any pasted Sony/Luminate data
+  const dataEl = document.getElementById('luminate-data');
+  const extraData = dataEl?.value?.trim() || '';
+
+  const msgs = document.getElementById('ai-msgs');
+  const typing = document.getElementById('ai-typing');
+  if(!msgs) return;
+
+  const userText = q || '(Voice/image message)';
+  msgs.innerHTML += '<div class="ai-u">'+userText+(extraData?'\n\n[Data attached]':'')+(jessiImages.length?'\n\n['+jessiImages.length+' image(s) attached]':'')+'</div>';
+  if(typing) typing.style.display = 'flex';
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Build message with context
+  let fullMsg = userText;
+  if(extraData) fullMsg += '\n\nDATA PROVIDED (Sony DSRP / Luminate / other):\n'+extraData;
+  if(jessiImages.length) fullMsg += '\n\n['+jessiImages.length+' screenshot(s) provided by user — describe what you see and incorporate into your response]';
+
+  fullMsg += buildJessiContext();
+
+  try {
+    // Build messages array with images if any
+    let messageContent;
+    if(jessiImages.length) {
+      messageContent = [
+        ...jessiImages.map(img => ({type:'image',source:{type:'base64',media_type:img.type,data:img.data.split(',')[1]}})),
+        {type:'text',text:fullMsg}
+      ];
+    } else {
+      messageContent = fullMsg;
+    }
+
+    aiHist.push({role:'user', content: userText});
+    const d = await apicall('/ai/chat', {method:'POST', body:JSON.stringify({
+      messages:[...aiHist.slice(0,-1), {role:'user', content:messageContent}]
+    })});
+    aiHist.push({role:'assistant', content:d.reply});
+
+    if(typing) typing.style.display = 'none';
+    const fmt2 = d.reply
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1 ↗</a>')
+      .replace(/\*\*([^*]+)\*\*/g,'<strong style="color:var(--gold)">$1</strong>')
+      .replace(/^#{1,3} (.+)$/gm,'<div style="font-family:Playfair Display,serif;font-size:14px;color:var(--gold);margin:10px 0 4px">$1</div>')
+      .replace(/\n/g,'<br>');
+
+    const actBtns='<div style="display:flex;gap:6px;margin-top:10px;padding-top:8px;border-top:1px solid var(--bdr);flex-wrap:wrap">'+
+      '<button onclick="copyAIResponse(this)" class="btno bsm">&#128203; Copy</button>'+
+      '<button onclick="saveAsDoc(this)" class="btno bsm">&#128190; Draft</button>'+
+      '<button data-fn="exportJessiToDrive(\"doc\")" class="drive-btn-doc btno bsm" style="color:#4285F4;border-color:#4285F422">&#128196; Doc</button>'+
+      '<button data-fn="exportJessiToDrive(\"sheet\")" class="drive-btn-doc btno bsm" style="color:#0F9D58;border-color:#0F9D5822">&#128202; Sheet</button>'+
+      '<button onclick="go(\"drafts\")" class="btno bsm">&#8594; Drafts</button>'+
+      '</div>';
+    msgs.innerHTML += '<div class="ai-a">'+fmt2+actBtns+'</div>';
+
+    // Clear images after sending
+    jessiImages = [];
+    jessiVoiceText = '';
+    const att = document.getElementById('jessi-attachments');
+    if(att){att.innerHTML='';att.style.display='none';}
+
+    jessiSaveSession();
+  } catch(e) {
+    if(typing) typing.style.display = 'none';
+    msgs.innerHTML += '<div class="ai-a" style="color:#f09a9a">Hey Jessi error: '+e.message+'<br><br>Check ANTHROPIC_API_KEY in Render env vars.</div>';
+  }
+  msgs.scrollTop = msgs.scrollHeight;
 }
-window.aiSend=aiSend;
+window.aiSend = aiSend;
+
+
 window.aiQuick=q=>{const inp=document.getElementById("ai-inp");if(inp)inp.value=q;aiSend()};
 window.copyAIResponse=btn=>{
   const msg=btn.closest(".ai-a");if(!msg)return;
@@ -1415,6 +1674,21 @@ ${CAMPAIGNS_DATA.map((c,ci)=>`
       <div class="cl" style="margin-bottom:3px">Instagram Sound Page</div>
       <input class="ec" value="${c.igSound||""}" placeholder="IG sound URL…" style="font-size:10px" onchange="CAMPAIGNS_DATA[${ci}].igSound=this.value;saveCampaignsLocal()">
     </div>
+  </div>
+  <!-- Live budget bar -->
+  <div style="margin-bottom:8px;padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--bdr)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-size:9px;color:var(--tx2);font-family:'Syne',sans-serif;text-transform:uppercase;letter-spacing:.1em;font-weight:700">Budget Used</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span style="font-size:11px;color:#a8f0c8;font-family:'Playfair Display',serif">$${c.spent.toLocaleString()} spent</span>
+        <span style="font-size:11px;color:var(--tx2);font-family:'Playfair Display',serif">of <input class="ec" value="${c.budget.toLocaleString()}" style="font-family:'Playfair Display',serif;font-size:11px;width:72px;color:var(--purple);display:inline" oninput="updateCampBudget('${c.id}',this.value)" title="Click to edit total budget"></span>
+        <span style="font-size:10px;font-weight:700;color:${c.budget>0&&(c.spent/c.budget)>0.8?'#f09a9a':'#a8f0c8'}">${c.budget>0?Math.round(c.spent/c.budget*100):0}%</span>
+      </div>
+    </div>
+    <div style="height:6px;background:var(--dim);border-radius:4px;overflow:hidden">
+      <div style="width:${c.budget>0?Math.min(Math.round(c.spent/c.budget*100),100):0}%;height:100%;background:${c.budget>0&&(c.spent/c.budget)>0.8?'#f09a9a':'var(--purple)'};border-radius:4px;transition:width .5s"></div>
+    </div>
+    <div style="font-size:9px;color:var(--tx3);margin-top:5px">$${(c.budget-c.spent).toLocaleString()} remaining · <button onclick="go('budget')" style="background:none;border:none;color:var(--purple);cursor:pointer;font-size:9px;font-family:'Syne',sans-serif;font-weight:700;padding:0;text-decoration:underline">View Budget Tracker →</button></div>
   </div>
   <div class="g4" style="margin-bottom:8px">
     ${Object.entries(c.kpis).map(([k,v])=>`<div style="background:${c.color}0a;border:1px solid ${c.color}22;border-radius:7px;padding:8px">
@@ -1626,14 +1900,15 @@ function pgBudget(){
   <button class="btno bsm" onclick="go('campaigns')">← Campaigns</button>
   <button class="btno bsm" onclick="go('crm')">Creator CRM</button>
   <button class="btn bsm" onclick="addBudgetLine()" style="margin-left:auto">+ Add Line</button>
-  <button class="btno bsm" onclick="exportBudget()">Export CSV</button>
+  <button class="btno bsm" onclick="exportBudget()">CSV</button>
+  <button class="btno bsm" onclick="exportBudgetToDrive()" style="color:#0F9D58;border-color:#0F9D5822">📊 Google Sheet</button>
 </div>
 <div class="g4" style="margin-bottom:11px">
   <div class="kpi" style="border:1px solid #c8a96e33">
     <div class="kl">Total Budget <span class="bge" style="background:#c8a96e14;color:#c8a96e;border:1px solid #c8a96e28">Editable</span></div>
     <div style="display:flex;align-items:center;gap:6px">
       <span style="font-family:'Playfair Display',serif;font-size:18px">$</span>
-      <input class="ec" id="budget-total" value="${budgetData.total.toLocaleString()}" style="font-family:'Playfair Display',serif;font-size:20px;width:100px;color:var(--gold)" oninput="budgetData.total=parseInt(this.value.replace(/,/g,''))||0;refreshBudgetSummary()">
+      <input class="ec" id="budget-total" value="${budgetData.total.toLocaleString()}" style="font-family:'Playfair Display',serif;font-size:20px;width:100px;color:var(--purple)" oninput="budgetData.total=parseInt(this.value.replace(/,/g,''))||0;refreshBudgetSummary()">
     </div>
   </div>
   ${kpi("Spent","$"+spent.toLocaleString(),pS+"% of budget","#a8f0c8",null)}
@@ -2034,7 +2309,8 @@ function pgContracts(){
 <div style="display:flex;gap:7px;margin-bottom:11px;align-items:center;flex-wrap:wrap">
   <div style="font-size:10px;color:var(--tx2)">All fields editable · Add Google Drive link per contract · Draft via Hey Jessi</div>
   <button class="btn bsm" onclick="addContract()" style="margin-left:auto">+ New Contract</button>
-  <button class="btno bsm" onclick="exportContracts()">Export CSV</button>
+  <button class="btno bsm" onclick="exportContracts()">CSV</button>
+  <button class="btno bsm" onclick="exportContractsToDrive()" style="color:#0F9D58;border-color:#0F9D5822">📊 Google Sheet</button>
 </div>
 <div class="g4" style="margin-bottom:11px">
   ${kpi("Total Contracts",contractsData.length,"all types","var(--tx)",null)}
@@ -2106,7 +2382,7 @@ function pgPartners(){
     {n:"GitHub ✅",r:"Code Repository",url:"https://github.com/WIREHOUSE-MEDIA/ak-intelligence-backend",st:"active",d:"LIVE — WIREHOUSE-MEDIA org · auto-deploys to Render on push"},
     {n:"Spotify ✅",r:"DSP + API",url:"https://developer.spotify.com/dashboard",st:"active",d:"LIVE — artist data, top tracks, popularity scores, album art, audio previews"},
     {n:"ChartEx ✅",r:"TikTok Sound Analytics",url:"https://chartex.com/artist/alicia-keys-9779",st:"active",d:"LIVE — Girl on Fire: 1.7M creates, 932M views · All songs searchable · real-time"},
-    {n:"Airtable ✅",r:"Database — CRM + Calendar",url:"https://airtable.com",st:"active",d:"LIVE — Base appmEo06Ys7B1OawE · Creator CRM editable · data saves"},
+    {n:"Airtable ✅",r:"Database — CRM + Calendar",url:"https://airtable.com",st:"active",d:"LIVE — Base appmEo06Ys7B1OawE · Creator CRM editable · data saves · Export any table to Google Sheets via Drive buttons"},
     {n:"Canva ✅",r:"Content Design",url:"https://canva.com/developers",st:"active",d:"LIVE — OAuth connected · Design in Canva on every calendar draft + content draft"},
     {n:"Google Calendar ✅",r:"Calendar Sync",url:"https://calendar.google.com",st:"active",d:"LIVE — jesskim@wirehousemedia.com · 7 AK content events synced"},
     {n:"Claude AI ✅",r:"Hey Jessi AI Agent",url:"https://anthropic.com",st:"active",d:"LIVE — claude-sonnet · Full AK context · Add credits at console.anthropic.com"},
@@ -2140,7 +2416,19 @@ function pgPartners(){
   </tr>`).join("")}</tbody></table>
 </div>
 <div class="card">
-  <div class="cl">Wirehouse Media — White-Label SaaS Model</div>
+  <div class="card" style="margin-bottom:11px">
+  <div class="cl" style="margin-bottom:9px">📂 Airtable → Google Drive Sync</div>
+  <div style="font-size:10px;color:var(--tx2);margin-bottom:10px;line-height:1.9">Export any Airtable table directly to a Google Sheet — opens in your browser with data pre-filled ready to save to Drive</div>
+  <div style="display:flex;gap:7px;flex-wrap:wrap">
+    ${["Creators","Budget","Contracts","Calendar","Campaigns"].map(t=>`
+    <button onclick="exportAirtableToDrive('${t}')" class="btno bsm" style="color:#0F9D58;border-color:#0F9D5833">📊 ${t} → Sheets</button>`).join("")}
+    <button onclick="exportCRMToDrive()" class="btno bsm" style="color:#0F9D58;border-color:#0F9D5833">📊 CRM → Sheets</button>
+    <button onclick="exportBudgetToDrive()" class="btno bsm" style="color:#0F9D58;border-color:#0F9D5833">📊 Budget → Sheets</button>
+    <button onclick="exportContractsToDrive()" class="btno bsm" style="color:#0F9D58;border-color:#0F9D5833">📊 Contracts → Sheets</button>
+    <button onclick="exportJessiToDrive('doc')" class="btno bsm" style="color:#4285F4;border-color:#4285F433">📄 Jessi Logs → Doc</button>
+  </div>
+</div>
+<div class="cl">Wirehouse Media — White-Label SaaS Model</div>
   <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:9px">
     <div style="background:var(--bg3);border-radius:8px;padding:12px">
       <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--gold);margin-bottom:6px;font-size:11px">What We're Building</div>
@@ -2165,192 +2453,453 @@ function pgPartners(){
 
 // ═══ CAMPAIGN REPORT + VIRAL — standalone pages ═══
 function pgCampaignReport(){
-  // Pull live data from platform for the Jessi prompt
-  const totalCreators = crmData ? crmData.length : 5;
-  const totalBudget = budgetData ? budgetData.total : 45000;
-  const totalSpent = budgetData ? budgetData.lines.reduce((a,b)=>a+b.spent,0) : 17100;
-  const activeCamp = CAMPAIGNS_DATA ? CAMPAIGNS_DATA.find(c=>c.status==="active") : null;
+  const camps=CAMPAIGNS_DATA||[];
+  return `
+<!-- Campaign Selector -->
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+  <select id="camp-report-select" onchange="switchCampaignReport(this.value)"
+    style="background:var(--bg3);border:1px solid var(--bdr);border-radius:7px;padding:7px 12px;font-size:11px;color:var(--tx);font-family:'DM Mono',monospace;cursor:pointer;flex:1;min-width:200px;max-width:340px">
+    <option value="all">📊 All Campaigns — Overview</option>
+    ${camps.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
+  </select>
+  <div style="display:flex;gap:5px;flex-wrap:wrap">
+    <button onclick="switchCampaignReport('all')" class="chip" style="font-size:9px">All</button>
+    ${camps.map(c=>`<button onclick="switchCampaignReport('${c.id}');document.getElementById('camp-report-select').value='${c.id}'" class="chip" style="font-size:9px;border-color:${c.color}44;color:${c.color}">${c.name.split(' ').slice(0,2).join(' ')}</button>`).join('')}
+  </div>
+</div>
 
-  return`
-<div class="an">📊 Campaign Report Dashboard — pulls from Campaign Manager · Creator CRM · Budget Tracker · Hey Jessi · Sony DSRP · ChartEx · Spotify · All data linked ↓</div>
+<!-- Upload/data panel -->
+<div class="card" style="margin-bottom:11px;border:1px dashed var(--purple)55">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="cl" style="margin-bottom:0;color:var(--purple)">📎 Add Data to This Dashboard</div>
+    <button onclick="document.getElementById('cr-upload-panel').style.display=document.getElementById('cr-upload-panel').style.display==='none'?'block':'none'" class="btno bsm" style="font-size:8px">+ Add</button>
+  </div>
+  <div id="cr-upload-panel" style="display:none;margin-top:10px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      <label style="padding:5px 10px;border-radius:7px;border:1px solid var(--bdr);background:var(--bg3);color:var(--tx2);font-family:'Syne',sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+        📷 Screenshots <input type="file" accept="image/*" multiple style="display:none" onchange="addCampDashUpload(this)">
+      </label>
+      <label style="padding:5px 10px;border-radius:7px;border:1px solid var(--bdr);background:var(--bg3);color:var(--tx2);font-family:'Syne',sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+        📄 Documents <input type="file" accept=".pdf,.csv,.xlsx,.doc,.docx" multiple style="display:none" onchange="addCampDashUpload(this)">
+      </label>
+      <a href="https://drive.google.com" target="_blank" class="btno bsm" style="text-decoration:none;font-size:9px">📁 Google Drive ↗</a>
+      <button onclick="sendDashToJessi()" class="btn bsm" style="font-size:9px">✦ Send All to Jessi</button>
+    </div>
+    <textarea class="inp" id="cr-data-paste" placeholder="Paste Sony DSRP numbers, Luminate data, ChartEx export, streaming stats — any format. Jessi reads everything." style="width:100%;min-height:65px;font-size:9px;resize:vertical;margin-bottom:7px"></textarea>
+    <div id="cr-uploads-preview" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+  </div>
+</div>
 
-<!-- TOP KPIs -->
+<div id="camp-report-content">loading...</div>`;
+}
+
+// upload state for campaign dashboard
+const crUploads=[];
+window.addCampDashUpload=(input)=>{
+  const files=Array.from(input.files||[]);
+  const preview=document.getElementById('cr-uploads-preview');
+  files.forEach(file=>{
+    const entry={name:file.name,type:file.type,size:file.size};
+    crUploads.push(entry);
+    if(file.type.startsWith('image/')){
+      const r=new FileReader();
+      r.onload=e=>{
+        entry.dataUrl=e.target.result;
+        if(preview){
+          const d=document.createElement('div');
+          d.style.cssText='position:relative;display:inline-block';
+          d.innerHTML='<img src="'+e.target.result+'" style="height:65px;border-radius:6px;border:1px solid var(--bdr);object-fit:cover">'+
+            '<div style="font-size:8px;color:var(--tx2);text-align:center;margin-top:2px">'+file.name.substring(0,16)+'</div>';
+          preview.appendChild(d);
+        }
+      };
+      r.readAsDataURL(file);
+    } else {
+      if(preview){
+        const d=document.createElement('div');
+        d.style.cssText='padding:6px 10px;background:var(--bg3);border:1px solid var(--bdr);border-radius:6px;font-size:9px;color:var(--tx2)';
+        d.textContent='📄 '+file.name;
+        preview.appendChild(d);
+      }
+    }
+  });
+  input.value='';
+};
+
+window.sendDashToJessi=()=>{
+  const paste=document.getElementById('cr-data-paste')?.value?.trim()||'';
+  const ctx=buildFullCampaignContext();
+  const imgs=crUploads.filter(u=>u.dataUrl);
+  if(imgs.length) jessiImages=imgs.map(u=>({type:'image/jpeg',data:u.dataUrl,name:u.name}));
+  go('ai');
+  setTimeout(()=>{
+    if(typeof setJessiMode==='function')setJessiMode('coverage');
+    const inp=document.getElementById('ai-inp');
+    if(inp)inp.value='Analyze all of this campaign dashboard data and generate a full coverage report:\n\n'+ctx+(paste?'\n\nADDITIONAL DATA:\n'+paste:'')+(imgs.length?'\n\n['+imgs.length+' screenshot(s) attached]':'');
+    setTimeout(aiSend,100);
+  },300);
+};
+
+window.switchCampaignReport=(campId)=>{
+  const el=document.getElementById('camp-report-content');
+  const sel=document.getElementById('camp-report-select');
+  if(sel)sel.value=campId;
+  if(!el)return;
+  const totalSpent=budgetData?budgetData.lines.reduce((a,b)=>a+b.spent,0):17100;
+  el.innerHTML=campId==='all'?buildAllCampsView(totalSpent):buildSingleCampView(campId);
+};
+
+// ── Editable top posts state (persisted in memory) ──
+let topPosts=[
+  {id:'p1',plat:'Instagram',handle:'@aliciakeys x @karolg',type:'Collab Reel (AK owned)',views:'32.9M',likes:'1.6M',url:'https://www.instagram.com/aliciakeys/',trend:'🔥 #1 Driver',postType:'owned'},
+  {id:'p2',plat:'TikTok',handle:'@tsaone_mamogale',type:'Creator Cover',views:'261.6K',likes:'49K',url:'https://www.tiktok.com/search?q=alicia+keys+try+sleeping',trend:'🔥 Viral',postType:'creator'},
+  {id:'p3',plat:'Instagram',handle:'@mtvla',type:'Repost',views:'363K',likes:'18.4K',url:'https://www.instagram.com/mtvla/',trend:'⬆️ Strong',postType:'seeding'},
+  {id:'p4',plat:'Instagram',handle:'@mujer.es_',type:'Fan Page',views:'224K',likes:'5.4K',url:'https://www.instagram.com/mujer.es_/',trend:'⬆️ Growing',postType:'organic'},
+  {id:'p5',plat:'Instagram',handle:'@fmdos',type:'Fan Page',views:'183K',likes:'12.7K',url:'https://www.instagram.com/fmdos/',trend:'⬆️ Latin',postType:'organic'},
+  {id:'p6',plat:'Instagram',handle:'@yosoymolusco',type:'Music Page',views:'–',likes:'27.9K',url:'https://www.instagram.com/yosoymolusco/',trend:'⬆️ Latin',postType:'seeding'},
+];
+
+// Posts from content calendar (owned + creator posts that went live)
+function getCalendarPosts(){
+  if(typeof CAL==='undefined')return[];
+  return Object.entries(CAL).filter(([d,ev])=>ev.st==='approved').map(([d,ev])=>({
+    id:'cal-'+d,plat:ev.t==='influencer'?'TikTok':'Instagram',handle:'@aliciakeys',
+    type:'Calendar: '+ev.l,views:'–',likes:'–',url:'',trend:'📅 Scheduled/Live',
+    postType:ev.t,cap:ev.cap
+  }));
+}
+
+function buildAllCampsView(totalSpent){
+  const totalBudget=budgetData?budgetData.total:45000;
+  const camps=CAMPAIGNS_DATA||[];
+  const calPosts=getCalendarPosts();
+  const allPosts=[...topPosts,...calPosts];
+
+  return `
+<!-- KPIs -->
 <div class="g4" style="margin-bottom:11px">
   ${kpi("Total Campaign Reach","43.9M+","Collab reel 34.1M + 9.8M tracked","#c8a96e",null)}
-  ${kpi("Worldwide Streaming","+21%","peaked 3/25 · Spotify +24%","#1DB954",null)}
-  ${kpi("Latin Streaming","+59%","Spotify +66% · Karol G crossover","#E1306C",null)}
+  ${kpi("Worldwide Streaming","+21%","Spotify +24% · Apple +22%","#1DB954",null)}
+  ${kpi("Latin Streaming","+59%","Spotify +66% · Shazam +221%","#E1306C",null)}
   ${kpi("TikTok Creates","4,370","Try Sleeping · 14 days","#69C9D0",null)}
 </div>
 
-<!-- PLATFORM DATA GRID -->
+<!-- Streaming breakdown -->
 <div class="g2" style="margin-bottom:11px">
   <div class="card">
-    <div class="cl">Worldwide Streaming (3/20–3/26)</div>
+    <div class="cl">🌍 Worldwide Streaming (3/20–3/26)</div>
     ${[["All Streaming","620.2K","+21%","#c8a96e"],["Spotify","339.1K","+24%","#1DB954"],["Apple Music","208.4K","+22%","#FC3C44"],["Pandora","37.4K","+2%","#888"],["Amazon Unlimited","17.2K","+5%","#00A8E0"],["Shazam","7.1K","+22%","#f0e68c"],["TikTok Views","4.5M","+34%","#69C9D0"],["Vevo","277.6K","+17%","#FF0000"],["YouTube","94.3K","+11%","#FF0000"]].map(([l,v,p,c])=>`
     <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #080818">
       <span style="font-size:10px;color:var(--tx2)">${l}</span>
-      <div style="display:flex;gap:10px"><span style="font-size:11px;color:var(--tx)">${v}</span><span style="font-size:11px;font-weight:700;color:${c}">${p}</span></div>
-    </div>`).join("")}
+      <div style="display:flex;gap:10px">
+        <span style="font-size:11px;color:var(--tx)">${v}</span>
+        <span style="font-size:11px;font-weight:700;color:${c}">${p}</span>
+      </div>
+    </div>`).join('')}
   </div>
   <div class="card">
-    <div class="cl">Latin Market (3/20–3/26) <span class="bge" style="background:#E1306C14;color:#E1306C;border:1px solid #E1306C28">+59%</span></div>
+    <div class="cl">🌎 Latin Market (3/20–3/26) <span class="bge" style="background:#E1306C14;color:#E1306C;border:1px solid #E1306C28">+59%</span></div>
     ${[["All Streaming","42.6K","+59%","#E1306C"],["Spotify","33.7K","+66%","#1DB954"],["Apple Music","6.3K","+49%","#FC3C44"],["Deezer","1.1K","+40%","#A238FF"],["Amazon Unlimited","745","+2%","#00A8E0"],["Shazam Latin","90","+221%","#f0e68c"],["TikTok Views","420.4K","+24%","#69C9D0"],["Vevo Latin","52.8K","+22%","#FF0000"],["YouTube Latin","6.2K","+29%","#FF0000"]].map(([l,v,p,c])=>`
     <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #080818">
       <span style="font-size:10px;color:var(--tx2)">${l}</span>
-      <div style="display:flex;gap:10px"><span style="font-size:11px;color:var(--tx)">${v}</span><span style="font-size:11px;font-weight:700;color:${c}">${p}</span></div>
-    </div>`).join("")}
+      <div style="display:flex;gap:10px">
+        <span style="font-size:11px;color:var(--tx)">${v}</span>
+        <span style="font-size:11px;font-weight:700;color:${c}">${p}</span>
+      </div>
+    </div>`).join('')}
   </div>
 </div>
 
-<!-- PLATFORM LINKED STATS -->
+<!-- Budget + Creators row -->
 <div class="g4" style="margin-bottom:11px">
-  <div class="card" style="border-top:2px solid #c8a96e33">
-    <div class="cl" style="margin-bottom:5px">Budget <button onclick="go('budget')" class="btno bsm" style="font-size:8px;padding:1px 6px;margin-left:5px">→</button></div>
-    <div style="font-family:'Playfair Display',serif;font-size:22px;color:#c8a96e">$${totalSpent.toLocaleString()}</div>
-    <div style="font-size:9px;color:var(--tx2);margin-top:3px">spent of $${totalBudget.toLocaleString()} total</div>
-    <div style="height:3px;background:#10102a;border-radius:2px;margin-top:7px"><div style="width:${Math.min(Math.round(totalSpent/totalBudget*100),100)}%;height:100%;background:#c8a96e;border-radius:2px"></div></div>
+  <div class="card" style="border-top:2px solid var(--purple)44">
+    <div class="cl">Budget <button onclick="go('budget')" class="btno bsm" style="font-size:8px;padding:1px 5px;margin-left:4px">→</button></div>
+    <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--purple)">$${totalSpent.toLocaleString()}</div>
+    <div style="font-size:9px;color:var(--tx2)">of $${totalBudget.toLocaleString()} total</div>
+    <div style="height:3px;background:var(--bg2);border-radius:2px;margin-top:7px">
+      <div style="width:${Math.min(Math.round(totalSpent/totalBudget*100),100)}%;height:100%;background:var(--purple);border-radius:2px"></div>
+    </div>
   </div>
-  <div class="card" style="border-top:2px solid #69C9D033">
-    <div class="cl" style="margin-bottom:5px">Creators <button onclick="go('crm')" class="btno bsm" style="font-size:8px;padding:1px 6px;margin-left:5px">→ CRM</button></div>
-    <div style="font-family:'Playfair Display',serif;font-size:22px;color:#69C9D0">${totalCreators}</div>
-    <div style="font-size:9px;color:var(--tx2);margin-top:3px">${crmData ? crmData.filter(c=>c.st==="contracted").length : 2} contracted · ${crmData ? crmData.filter(c=>c.st==="draft review").length : 1} in draft review</div>
+  <div class="card" style="border-top:2px solid #69C9D044">
+    <div class="cl">Creators <button onclick="go('crm')" class="btno bsm" style="font-size:8px;padding:1px 5px;margin-left:4px">→ CRM</button></div>
+    <div style="font-family:'Playfair Display',serif;font-size:22px;color:#69C9D0">${crmData?crmData.length:5}</div>
+    <div style="font-size:9px;color:var(--tx2)">${crmData?crmData.filter(c=>c.st==='contracted').length:2} contracted · ${crmData?crmData.filter(c=>c.st==='draft review').length:1} in review</div>
   </div>
-  <div class="card" style="border-top:2px solid #1DB95433">
-    <div class="cl" style="margin-bottom:5px">Spotify <button onclick="go('dsp')" class="btno bsm" style="font-size:8px;padding:1px 6px;margin-left:5px">→ DSP</button></div>
+  <div class="card" style="border-top:2px solid #1DB95444">
+    <div class="cl">Spotify <button onclick="go('dsp')" class="btno bsm" style="font-size:8px;padding:1px 5px;margin-left:4px">→ DSP</button></div>
     <div style="font-family:'Playfair Display',serif;font-size:22px;color:#1DB954">36.6M</div>
-    <div style="font-size:9px;color:var(--tx2);margin-top:3px">monthly listeners · +8.3% (30d)</div>
+    <div style="font-size:9px;color:var(--tx2)">monthly listeners · +8.3%</div>
   </div>
-  <div class="card" style="border-top:2px solid #E1306C33">
-    <div class="cl" style="margin-bottom:5px">TikTok <button onclick="go('chartex')" class="btno bsm" style="font-size:8px;padding:1px 6px;margin-left:5px">→ ChartEx</button></div>
-    <div style="font-family:'Playfair Display',serif;font-size:22px;color:#E1306C">4,370</div>
-    <div style="font-size:9px;color:var(--tx2);margin-top:3px">Try Sleeping creates · 1.1M views</div>
+  <div class="card" style="border-top:2px solid #69C9D044">
+    <div class="cl">TikTok <button onclick="go('chartex')" class="btno bsm" style="font-size:8px;padding:1px 5px;margin-left:4px">→ ChartEx</button></div>
+    <div style="font-family:'Playfair Display',serif;font-size:22px;color:#69C9D0">4,370</div>
+    <div style="font-size:9px;color:var(--tx2)">Try Sleeping creates · 1.1M views</div>
   </div>
 </div>
 
-<!-- TOP POSTS -->
+<!-- Top Performing Posts — editable -->
 <div class="card" style="margin-bottom:11px">
-  <div class="cl">Top Performing Posts <a href="https://www.instagram.com/aliciakeys/" target="_blank" class="dl" style="color:#E1306C;margin-left:8px">IG ↗</a><a href="https://www.tiktok.com/@aliciakeys" target="_blank" class="dl" style="color:#69C9D0;margin-left:4px">TikTok ↗</a></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div>
+      <div class="cl" style="margin-bottom:2px">Top Performing Posts <span class="bge" style="background:var(--purple)14;color:var(--purple);border:1px solid var(--purple)28">Editable</span></div>
+      <div style="font-size:9px;color:var(--tx3)">🔵 Owned (AK) · 🟢 Creator posts · 🟡 Seeding · ⚪ Organic · 📅 From Calendar</div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button onclick="addTopPost()" class="btn bsm" style="font-size:9px">+ Add Post</button>
+      <button onclick="togglePostEdit()" class="btno bsm" id="post-edit-btn" style="font-size:9px">✏️ Edit</button>
+    </div>
+  </div>
+  <div id="top-posts-view">
+    ${renderTopPostsView(allPosts)}
+  </div>
+  <div id="top-posts-edit" style="display:none">
+    ${renderTopPostsEdit(topPosts)}
+  </div>
+</div>
+
+<!-- Social Listening + Sentiment -->
+<div class="card" style="margin-bottom:11px">
+  <div class="cl" style="margin-bottom:9px">💬 Social Listening & Sentiment <span class="bge bge-wait">Brand24 — coming soon</span></div>
+  <div class="g4" style="margin-bottom:9px">
+    ${kpi("Sentiment","94% Positive","post-campaign","#a8f0c8",null)}
+    ${kpi("Total Mentions","~2.4M est.","30 days","#c8a96e","wait")}
+    ${kpi("Top Hashtag","#ConCoraGala","43.9M reach","#69C9D0",null)}
+    ${kpi("Viral Narrative","Full-Circle Moment","Karol G 16yr journey","#c8a96e",null)}
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:9px">
+    ${["#AliciaKeys","#KarolG","#ConCoraGala","#TrySleeping","#Plentiful","#PushaT","#HellsKitchenBroadway","#LaAurora"].map(t=>`<span class="pill" style="background:var(--purple)14;color:var(--purple);border:1px solid var(--purple)28;font-size:9px">${t}</span>`).join('')}
+  </div>
+  <div style="font-size:10px;color:var(--tx2);line-height:2;padding:9px;background:var(--bg3);border-radius:7px;border:1px solid var(--bdr)">
+    <strong style="color:var(--tx)">Key narratives people are saying:</strong><br>
+    "Karol G and Alicia Keys — a full-circle moment 16 years in the making" · "Try Sleeping with a Broken Heart hits different in 2026" · 
+    "The piano performance everyone is talking about" · "Male emotional covers are taking over TikTok" · 
+    "AK x Karol G is the cross-genre collab nobody knew they needed" · "Hell's Kitchen Broadway sold out — iconic"<br><br>
+    <span style="color:var(--tx3)">Connect Brand24 for real-time mentions from Instagram, TikTok, YouTube, Reddit, News, Podcasts, LinkedIn and more</span>
+  </div>
+</div>
+
+<!-- Key Insights & Narratives -->
+<div class="card" style="margin-bottom:11px">
+  <div class="cl" style="margin-bottom:9px">💡 Key Insights & Narratives</div>
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+    ${[
+      ["🎬 Collab Reel = #1 Driver","32.9M views · 1.6M likes. Highest performing owned post. Sparked global amplification across music pages. Latin music pages amplified at +3x normal rate.","#c8a96e"],
+      ["🌎 Latin Market Overperformed","+59% vs +21% global. Karol G audience crossover confirmed. Shazam Latin +221% — discovery signal. New Latin audience segment unlocked for future targeting.","#E1306C"],
+      ["📈 Male Creator Cover Trend","@tsaone_mamogale 261.6K views · 49K likes in 3 days. Emotional male piano covers of Try Sleeping going viral. This creator archetype should be scaled immediately.","#1DB954"],
+      ["💫 Full-Circle Narrative Drives Organic","Karol G 16-year journey with AK story drove organic distribution without paid push. Emotional storytelling consistently outperforms promotional content.","#f0e68c"],
+      ["🎵 Social → Streaming Conversion Confirmed","TikTok creates and Spotify streams moved in lockstep. Spotify follower spike: +6,045 on Mar 23 (+93.6% vs avg). Direct TikTok → DSP pipeline proven.","#69C9D0"],
+      ["🌍 Global Reach: Kenya · S. Africa · UK · US · LatAm","AK catalog has evergreen global pull. Con Cora Gala unlocked Latin America as a high-engagement market. Target with Spanish-language content next.","#a8f0c8"],
+    ].map(([t,d,c])=>`
+    <div style="background:var(--bg3);border-radius:8px;padding:11px;border-left:3px solid ${c}44">
+      <div style="font-size:11px;font-weight:700;font-family:'Syne',sans-serif;color:${c};margin-bottom:4px">${t}</div>
+      <div style="font-size:10px;color:var(--tx2);line-height:1.8">${d}</div>
+    </div>`).join('')}
+  </div>
+</div>
+
+<!-- Campaign cards overview -->
+<div class="card" style="margin-bottom:11px">
+  <div class="cl" style="margin-bottom:9px">📋 Campaign Overview <button onclick="go('campaigns')" class="btno bsm" style="font-size:8px;margin-left:6px">→ Campaign Manager</button></div>
+  <div class="g3">
+    ${(CAMPAIGNS_DATA||[]).map(c=>`
+    <div style="background:var(--bg3);border-radius:8px;padding:10px;border-left:3px solid ${c.color};cursor:pointer" onclick="switchCampaignReport('${c.id}');document.getElementById('camp-report-select').value='${c.id}'">
+      <div style="font-weight:700;font-size:11px;font-family:'Syne',sans-serif;color:${c.color};margin-bottom:3px">${c.name} →</div>
+      <div style="font-size:10px;color:var(--tx2);margin-bottom:7px">${c.goal}</div>
+      <div style="height:3px;background:var(--bg2);border-radius:2px;margin-bottom:4px">
+        <div style="width:${c.budget>0?Math.min(Math.round(c.spent/c.budget*100),100):0}%;height:100%;background:${c.color};border-radius:2px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px">
+        <span style="color:var(--tx2)">$${c.spent.toLocaleString()} / $${c.budget.toLocaleString()}</span>
+        <span style="color:${c.color};font-weight:700">${c.status}</span>
+      </div>
+    </div>`).join('')}
+  </div>
+</div>
+
+${buildCommandCenter()}`;
+}
+
+function buildSingleCampView(campId){
+  const c=(CAMPAIGNS_DATA||[]).find(x=>x.id===campId);
+  if(!c)return'<div class="card">Campaign not found</div>';
+  const campBudgetLines=(budgetData?.lines||[]).filter(l=>l.camp===c.name);
+  const campSpent=campBudgetLines.reduce((a,b)=>a+b.spent,0)||c.spent;
+  const campCreators=(crmData||[]).filter(cr=>cr.camp===c.name||cr.camp===c.id);
+  const calPosts=getCalendarPosts().filter(p=>p.postType===c.type||p.type.includes(c.name.split(' ')[0]));
+  const campPostsAll=[...topPosts.filter(p=>p.handle.includes(c.name.split(' ')[0].toLowerCase())||campCreators.some(cr=>p.handle.includes(cr.h))),...calPosts];
+
+  return `
+<div class="card" style="border-left:4px solid ${c.color};margin-bottom:11px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+    <div>
+      <div style="font-family:'Playfair Display',serif;font-size:20px;color:${c.color}">${c.name}</div>
+      <div style="font-size:11px;color:var(--tx2);margin-top:3px">${c.goal}</div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:2px">Sound: <strong style="color:var(--tx)">${c.sound}</strong> · Platforms: ${(c.platforms||[]).join(', ')} · ${c.start}–${c.end}</div>
+    </div>
+    <span class="pill" style="background:${c.color}18;color:${c.color};border:1px solid ${c.color}30;flex-shrink:0">${c.status}</span>
+  </div>
+  <div class="g4" style="margin-bottom:10px">
+    ${[["Budget","$"+c.budget.toLocaleString(),"var(--purple)"],["Spent","$"+campSpent.toLocaleString(),"#a8f0c8"],["Remaining","$"+(c.budget-campSpent).toLocaleString(),"var(--tx2)"],["Creators",(campCreators.length||c.creators.length)+" active","#69C9D0"]].map(([l,v,col])=>`
+    <div style="background:var(--bg3);border-radius:7px;padding:9px">
+      <div style="font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2);margin-bottom:3px;font-weight:700;font-family:'Syne',sans-serif">${l}</div>
+      <div style="font-family:'Playfair Display',serif;font-size:17px;color:${col}">${v}</div>
+    </div>`).join('')}
+  </div>
+  <div style="height:5px;background:var(--bg2);border-radius:3px">
+    <div style="width:${c.budget>0?Math.min(Math.round(campSpent/c.budget*100),100):0}%;height:100%;background:${c.color};border-radius:3px"></div>
+  </div>
+</div>
+
+${Object.keys(c.kpis||{}).length?`
+<div class="g4" style="margin-bottom:11px">
+  ${Object.entries(c.kpis||{}).map(([k,v])=>`
+  <div class="card" style="border-top:2px solid ${c.color}33">
+    <div class="cl" style="color:${c.color}">${k}</div>
+    <div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--tx)">${v}</div>
+  </div>`).join('')}
+</div>`:''}
+
+${campCreators.length?`
+<div class="card" style="margin-bottom:11px">
+  <div class="cl">Creators on This Campaign <button onclick="go('crm')" class="btno bsm" style="font-size:8px;margin-left:6px">→ CRM</button></div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+    ${campCreators.map(cr=>`<div style="padding:7px 11px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px">
+      <div style="font-size:11px;font-weight:700;color:#69C9D0;font-family:'Syne',sans-serif">${cr.n}</div>
+      <div style="font-size:9px;color:var(--tx2);margin-top:2px">${cr.h} · ${cr.plat} · ${cr.fol} · ${cr.fee}</div>
+      <div style="font-size:9px;margin-top:2px"><span class="pill" style="background:#a8f0c814;color:#a8f0c8;border:1px solid #a8f0c820;font-size:8px">${cr.st}</span></div>
+    </div>`).join('')}
+  </div>
+</div>`:`<div class="card" style="margin-bottom:11px"><div class="cl">Creators</div><div style="font-size:11px;color:var(--tx2);margin-top:5px">${(c.creators||[]).join(' · ')}</div></div>`}
+
+${campBudgetLines.length?`
+<div class="card" style="margin-bottom:11px">
+  <div class="cl">Budget Lines <button onclick="go('budget')" class="btno bsm" style="font-size:8px;margin-left:6px">→ Budget Tracker</button></div>
   <div style="overflow-x:auto;margin-top:8px"><table>
-    <thead><tr><th>Platform</th><th>Handle</th><th>Type</th><th>Views</th><th>Likes</th><th>Trend</th><th>↗</th></tr></thead>
-    <tbody>${[
-      {plat:"Instagram",handle:"@aliciakeys x @karolg",type:"Collab Reel",views:"32.9M",likes:"1.6M",url:"https://www.instagram.com/aliciakeys/",trend:"🔥 #1 Driver"},
-      {plat:"Instagram",handle:"@mtvla",type:"Repost",views:"363K",likes:"18.4K",url:"https://www.instagram.com/mtvla/",trend:"⬆️ Strong"},
-      {plat:"Instagram",handle:"@mujer.es_",type:"Fan Page",views:"224K",likes:"5.4K",url:"https://www.instagram.com/mujer.es_/",trend:"⬆️ Growing"},
-      {plat:"TikTok",handle:"@tsaone_mamogale",type:"Creator Cover",views:"261.6K",likes:"49K",url:"https://www.tiktok.com/search?q=alicia+keys+try+sleeping",trend:"🔥 Viral Cover"},
-      {plat:"Instagram",handle:"@fmdos",type:"Fan Page",views:"183K",likes:"12.7K",url:"https://www.instagram.com/fmdos/",trend:"⬆️ Latin"},
-      {plat:"Instagram",handle:"@yosoymolusco",type:"Music Page",views:"–",likes:"27.9K",url:"https://www.instagram.com/yosoymolusco/",trend:"⬆️ Latin"},
-    ].map(p=>`<tr class="trow" onclick="window.open('${p.url}','_blank')">
-      <td>${pill({"Instagram":"#E1306C","TikTok":"#69C9D0"}[p.plat]||"#888",p.plat)}</td>
+    <thead><tr><th>Line Item</th><th>Budget</th><th>Spent</th><th>Remaining</th><th>Status</th></tr></thead>
+    <tbody>${campBudgetLines.map(l=>`<tr class="trow">
+      <td style="font-size:11px">${l.name}</td>
+      <td style="font-family:'Playfair Display',serif;font-size:15px">$${l.total.toLocaleString()}</td>
+      <td style="font-family:'Playfair Display',serif;font-size:15px;color:#a8f0c8">$${l.spent.toLocaleString()}</td>
+      <td style="font-family:'Playfair Display',serif;font-size:15px;color:var(--tx2)">$${(l.total-l.spent).toLocaleString()}</td>
+      <td><span class="pill" style="background:#a8f0c814;color:#a8f0c8;border:1px solid #a8f0c820;font-size:9px">${l.st}</span></td>
+    </tr>`).join('')}</tbody>
+  </table></div>
+</div>`:''}
+
+<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:11px">
+  <button onclick="jessiCampaignReport('${c.id}')" class="btn bsm">✦ Generate Full Report via Jessi</button>
+  <button onclick="jessiCreatorOpps()" class="btno bsm">→ Creator Opportunities</button>
+  <button onclick="go('campaigns')" class="btno bsm">→ Campaign Manager</button>
+  <button onclick="go('crm')" class="btno bsm">→ CRM</button>
+  <button onclick="switchCampaignReport('all')" class="btno bsm">← All Campaigns</button>
+</div>`;
+}
+
+// ── Top posts render + edit ──
+function renderTopPostsView(posts){
+  const typeColors={owned:'#a07fd4',creator:'#1DB954',seeding:'#69C9D0',organic:'#f0e68c','📅 Scheduled/Live':'#c8a96e'};
+  const typeDots={owned:'🔵',creator:'🟢',seeding:'🟡',organic:'⚪'};
+  return `<div style="overflow-x:auto"><table>
+    <thead><tr><th>Type</th><th>Platform</th><th>Handle / Account</th><th>Content Type</th><th>Views</th><th>Likes</th><th>Trend</th><th>↗</th></tr></thead>
+    <tbody>${posts.map(p=>`<tr class="trow" onclick="${p.url?`window.open('${p.url}','_blank')`:''}">
+      <td>${typeDots[p.postType]||'⚪'}</td>
+      <td>${pill({Instagram:'#E1306C',TikTok:'#69C9D0',YouTube:'#FF0000'}[p.plat]||'#888',p.plat)}</td>
       <td style="font-weight:700;font-size:11px;color:#69C9D0">${p.handle}</td>
       <td style="font-size:10px;color:var(--tx2)">${p.type}</td>
       <td style="font-family:'Playfair Display',serif;font-size:15px;color:var(--gold)">${p.views}</td>
       <td style="font-family:'Playfair Display',serif;font-size:15px">${p.likes}</td>
-      <td style="color:#a8f0c8;font-size:10px;font-weight:700">${p.trend}</td>
-      <td onclick="event.stopPropagation()"><a href="${p.url}" target="_blank" class="dl" style="color:#69C9D0">↗</a></td>
-    </tr>`).join("")}
-    </tbody>
-  </table></div>
-</div>
+      <td style="font-size:10px;color:#a8f0c8;font-weight:700">${p.trend}</td>
+      <td onclick="event.stopPropagation()">${p.url?`<a href="${p.url}" target="_blank" class="dl" style="color:#69C9D0">↗</a>`:'-'}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
 
-<!-- KEY INSIGHTS -->
-<div class="card" style="margin-bottom:11px">
-  <div class="cl">Key Insights & Narratives</div>
-  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px">
-    ${[
-      ["🎬 Collab Reel = #1 Driver","32.9M views, 1.6M likes. Sparked amplification across music pages globally. Karol G's audience converted at high rate."],
-      ["🌎 Latin Overperformed","+59% vs +21% global. Karol G audience crossover confirmed. Shazam Latin +221%. New audience segment unlocked."],
-      ["📈 Male Creator Cover Trend","@tsaone_mamogale: 261.6K views, 49K likes in 3 days on Try Sleeping cover. Scale this creator archetype immediately."],
-      ["💫 Full-Circle Narrative","Karol G's 16yr journey with AK drove organic distribution. Emotional storytelling > promotional content every time."],
-      ["🎵 Social → Streaming Conversion","TikTok creates + Spotify streams moved in lockstep. Spotify follower spike: +6,045 on Mar 23 (+93.6% vs avg day)."],
-      ["🌍 Global Reach Confirmed","Kenya, South Africa, US, UK, Latin America all strong. AK's catalog has global evergreen pull."],
-    ].map(([t,d])=>`
-    <div style="background:var(--bg3);border-radius:8px;padding:10px 12px;border:1px solid var(--bdr)">
-      <div style="font-size:11px;font-weight:700;font-family:'Syne',sans-serif;margin-bottom:4px;color:var(--tx)">${t}</div>
-      <div style="font-size:10px;color:var(--tx2);line-height:1.8">${d}</div>
-    </div>`).join("")}
-  </div>
-</div>
+function renderTopPostsEdit(posts){
+  return `<div style="font-size:10px;color:var(--tx2);margin-bottom:8px">Edit any field below — changes save instantly</div>`+
+  posts.map((p,i)=>`
+  <div style="display:grid;grid-template-columns:100px 110px 140px 120px 80px 80px 80px 1fr 28px;gap:5px;margin-bottom:6px;align-items:center;padding:6px;background:var(--bg3);border-radius:7px">
+    <select style="background:var(--bg);border:1px solid var(--bdr);border-radius:5px;padding:4px 6px;font-size:9px;color:var(--tx);font-family:'DM Mono',monospace" onchange="topPosts[${i}].postType=this.value;topPosts[${i}].plat=this.options[this.selectedIndex].dataset.plat||topPosts[${i}].plat;refreshTopPosts()">
+      ${['owned','creator','seeding','organic'].map(t=>`<option value="${t}" ${p.postType===t?'selected':''}>${{owned:'🔵 Owned',creator:'🟢 Creator',seeding:'🟡 Seeding',organic:'⚪ Organic'}[t]}</option>`).join('')}
+    </select>
+    <select style="background:var(--bg);border:1px solid var(--bdr);border-radius:5px;padding:4px 6px;font-size:9px;color:var(--tx);font-family:'DM Mono',monospace" onchange="topPosts[${i}].plat=this.value;refreshTopPosts()">
+      ${['Instagram','TikTok','YouTube','X/Twitter','Facebook'].map(pl=>`<option value="${pl}" ${p.plat===pl?'selected':''}>${pl}</option>`).join('')}
+    </select>
+    <input class="ec" value="${p.handle}" style="font-size:10px" oninput="topPosts[${i}].handle=this.value" placeholder="@handle">
+    <input class="ec" value="${p.type}" style="font-size:10px" oninput="topPosts[${i}].type=this.value" placeholder="Content type">
+    <input class="ec" value="${p.views}" style="font-size:10px;text-align:right" oninput="topPosts[${i}].views=this.value" placeholder="Views">
+    <input class="ec" value="${p.likes}" style="font-size:10px;text-align:right" oninput="topPosts[${i}].likes=this.value" placeholder="Likes">
+    <input class="ec" value="${p.trend}" style="font-size:10px" oninput="topPosts[${i}].trend=this.value" placeholder="Trend">
+    <input class="ec" value="${p.url}" style="font-size:10px" oninput="topPosts[${i}].url=this.value" placeholder="URL (paste link)">
+    <button onclick="topPosts.splice(${i},1);refreshTopPosts()" style="background:none;border:none;color:#f09a9a;cursor:pointer;font-size:16px;padding:0;line-height:1">×</button>
+  </div>`).join('')+
+  `<button onclick="addTopPost()" class="btno bsm" style="margin-top:5px;width:100%">+ Add Post</button>`;
+}
 
-<!-- PASTE SONY DATA -->
-<div class="card" style="margin-bottom:11px">
-  <div class="cl" style="margin-bottom:7px">📋 Add New Data — Sony DSRP, streaming exports, any numbers</div>
-  <textarea class="inp" id="report-paste" placeholder="Paste Sony DSRP data, Spotify for Artists export, brand report, ChartEx export, or any campaign numbers here…&#10;&#10;Hey Jessi will weave it into a full coverage report with narratives, insights, and creator opportunities." style="width:100%;min-height:90px;font-size:10px;resize:vertical;margin-bottom:8px"></textarea>
-  <div style="display:flex;gap:7px;flex-wrap:wrap">
-    <button onclick="sendReportToJessi()" class="btn bsm">✦ Send to Hey Jessi → Full Report</button>
-    <button onclick="go('ai')" class="btno bsm">→ Open Hey Jessi</button>
-    <button onclick="go('campaigns')" class="btno bsm">→ Campaigns</button>
-    <button onclick="go('budget')" class="btno bsm">→ Budget</button>
-  </div>
-</div>
+window.togglePostEdit=()=>{
+  const v=document.getElementById('top-posts-view');
+  const e=document.getElementById('top-posts-edit');
+  const btn=document.getElementById('post-edit-btn');
+  if(!v||!e)return;
+  const editing=e.style.display==='none';
+  v.style.display=editing?'none':'';
+  e.style.display=editing?'':'none';
+  if(btn)btn.textContent=editing?'👁 View':'✏️ Edit';
+};
 
-<!-- ACTION COMMAND CENTER -->
-<div class="card" style="background:linear-gradient(135deg,#c8a96e08,#c8a96e03);border-color:#c8a96e22">
-  <div class="cl" style="color:var(--gold);margin-bottom:12px">⚡ Campaign Command Center — all actions wired to the platform</div>
+window.addTopPost=()=>{
+  topPosts.push({id:'p'+Date.now(),plat:'Instagram',handle:'',type:'',views:'',likes:'',url:'',trend:'',postType:'owned'});
+  refreshTopPosts();
+  const v=document.getElementById('top-posts-view');
+  const e=document.getElementById('top-posts-edit');
+  if(v)v.style.display='none';
+  if(e)e.style.display='';
+};
+
+window.refreshTopPosts=()=>{
+  const calPosts=getCalendarPosts();
+  const all=[...topPosts,...calPosts];
+  const v=document.getElementById('top-posts-view');
+  const e=document.getElementById('top-posts-edit');
+  if(v&&v.style.display!=='none')v.innerHTML=renderTopPostsView(all);
+  if(e&&e.style.display!=='none')e.innerHTML=renderTopPostsEdit(topPosts);
+};
+
+window.jessiCampaignReport=(id)=>{
+  const c=(CAMPAIGNS_DATA||[]).find(x=>x.id===id);
+  if(!c)return;
+  const ctx=buildFullCampaignContext();
+  go('ai');
+  setTimeout(()=>{
+    if(typeof setJessiMode==='function')setJessiMode('coverage');
+    const inp=document.getElementById('ai-inp');
+    if(inp)inp.value='Generate a full professional coverage report for: '+c.name+'\n\nCampaign: '+c.goal+' | Budget: $'+c.budget+' spent: $'+c.spent+' | Sound: '+c.sound+' | Platforms: '+(c.platforms||[]).join(', ')+'\n\nFull platform data:\n'+ctx;
+    setTimeout(aiSend,100);
+  },300);
+};
+
+function buildCommandCenter(){
+  return `<div class="card" style="background:linear-gradient(135deg,var(--purple-dim),var(--bg3));border-color:var(--purple)22">
+  <div class="cl" style="color:var(--purple);margin-bottom:12px">⚡ Campaign Command Center — all actions wired to the platform</div>
   <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
-
-    <!-- Generate Full Report -->
-    <div style="background:var(--bg3);border-radius:9px;padding:12px;border:1px solid var(--bdr)">
-      <div style="font-size:10px;font-weight:700;font-family:'Syne',sans-serif;color:var(--gold);margin-bottom:5px">📊 Full Coverage Report</div>
-      <div style="font-size:9px;color:var(--tx2);margin-bottom:9px;line-height:1.8">Hey Jessi pulls all platform data — creators, budget, CRM, streaming, TikTok, Sony data, ChartEx, narratives — into one pro coverage report</div>
-      <button onclick="jessiFullReport()" class="btn bsm" style="width:100%">✦ Generate via Hey Jessi</button>
-    </div>
-
-    <!-- Creator Opportunities -->
-    <div style="background:var(--bg3);border-radius:9px;padding:12px;border:1px solid var(--bdr)">
-      <div style="font-size:10px;font-weight:700;font-family:'Syne',sans-serif;color:#69C9D0;margin-bottom:5px">🎯 Creator Opportunities</div>
-      <div style="font-size:9px;color:var(--tx2);margin-bottom:9px;line-height:1.8">Jessi identifies the best creator types, handles, and outreach strategy based on the cover trend + male creator spike. Adds directly to CRM.</div>
-      <div style="display:flex;gap:5px">
-        <button onclick="jessiCreatorOpps()" class="btn bsm" style="flex:1;background:#69C9D0">✦ Get Opportunities</button>
-        <button onclick="go('crm')" class="btno bsm">→ CRM</button>
-      </div>
-    </div>
-
-    <!-- Newsletter -->
-    <div style="background:var(--bg3);border-radius:9px;padding:12px;border:1px solid var(--bdr)">
-      <div style="font-size:10px;font-weight:700;font-family:'Syne',sans-serif;color:#a8f0c8;margin-bottom:5px">📩 Write Newsletter</div>
-      <div style="font-size:9px;color:var(--tx2);margin-bottom:9px;line-height:1.8">Hey Jessi writes the AK family newsletter for this campaign moment — warm, authentic, in AK's voice. Ready to copy + send.</div>
-      <button onclick="jessiNewsletter()" class="btn bsm" style="width:100%;background:#a8f0c855;color:#a8f0c8;border:1px solid #a8f0c833">✦ Write Newsletter</button>
-    </div>
-
-    <!-- Post-Campaign PDF Report -->
-    <div style="background:var(--bg3);border-radius:9px;padding:12px;border:1px solid var(--bdr)">
-      <div style="font-size:10px;font-weight:700;font-family:'Syne',sans-serif;color:#f0e68c;margin-bottom:5px">📄 Post-Campaign Report</div>
-      <div style="font-size:9px;color:var(--tx2);margin-bottom:9px;line-height:1.8">Generate a formatted post-campaign summary report — executive summary, ROI, wins, learnings, next steps. Copy as PDF or doc.</div>
-      <button onclick="jessiPostCampaign()" class="btn bsm" style="width:100%;background:#f0e68c22;color:#f0e68c;border:1px solid #f0e68c33">✦ Generate Report</button>
-    </div>
-
-    <!-- Build Next Campaign -->
-    <div style="background:var(--bg3);border-radius:9px;padding:12px;border:1px solid var(--bdr)">
-      <div style="font-size:10px;font-weight:700;font-family:'Syne',sans-serif;color:#E1306C;margin-bottom:5px">🚀 Build Next Campaign</div>
-      <div style="font-size:9px;color:var(--tx2);margin-bottom:9px;line-height:1.8">Jessi ideates the next campaign from this data — sound to push, creators to source, platforms, dates, budget. Adds to Campaign Manager.</div>
-      <div style="display:flex;gap:5px">
-        <button onclick="jessiBuildCampaign()" class="btn bsm" style="flex:1;background:#E1306C44;color:#E1306C;border:1px solid #E1306C33">✦ Ideate via Jessi</button>
-        <button onclick="go('campaigns')" class="btno bsm">→ Campaigns</button>
-      </div>
-    </div>
-
-    <!-- Content Strategy -->
-    <div style="background:var(--bg3);border-radius:9px;padding:12px;border:1px solid var(--bdr)">
-      <div style="font-size:10px;font-weight:700;font-family:'Syne',sans-serif;color:#9b59b6;margin-bottom:5px">🎬 Content Strategy + Shotlist</div>
-      <div style="font-size:9px;color:var(--tx2);margin-bottom:9px;line-height:1.8">Based on what worked — Jessi writes a content strategy with specific shotlist, sound recommendations, and caption angles. Adds to calendar.</div>
-      <div style="display:flex;gap:5px">
-        <button onclick="jessiContentStrat()" class="btn bsm" style="flex:1;background:#9b59b622;color:#9b59b6;border:1px solid #9b59b633">✦ Build Strategy</button>
-        <button onclick="go('calendar')" class="btno bsm">→ Calendar</button>
-      </div>
-    </div>
+    ${[
+      ["📊 Full Coverage Report","Pulls creators, budget, streaming, TikTok, Sony data, ChartEx into one pro report","jessiFullReport()","var(--purple)"],
+      ["🎯 Creator Opportunities","Source creators based on male cover trend + Latin +59% spike","jessiCreatorOpps()","#69C9D0"],
+      ["📩 Write Newsletter","AK family newsletter in her warm personal voice","jessiNewsletter()","#a8f0c8"],
+      ["📄 Post-Campaign PDF","Executive summary — executive-ready for any stakeholder","jessiPostCampaign()","#f0e68c"],
+      ["🚀 Build Next Campaign","Ideate next campaign from what worked","jessiBuildCampaign()","#E1306C"],
+      ["🎬 Content Strategy","Shotlist + 2-week calendar + TikTok concepts","jessiContentStrat()","#9b59b6"],
+    ].map(([t,d,fn,col])=>`
+    <div style="background:var(--bg3);border-radius:9px;padding:11px;border:1px solid var(--bdr)">
+      <div style="font-size:10px;font-weight:700;font-family:'Syne',sans-serif;color:${col};margin-bottom:4px">${t}</div>
+      <div style="font-size:9px;color:var(--tx2);margin-bottom:8px;line-height:1.8">${d}</div>
+      <button onclick="${fn};go('ai')" class="btn bsm" style="width:100%;background:${col}33;color:${col};border:1px solid ${col}44">✦ Run</button>
+    </div>`).join('')}
   </div>
 </div>`;
 }
 
 
-// ── Campaign Report → Jessi action suite ──
-function buildFullCampaignContext(){
-  const creators=crmData?crmData.map(c=>`${c.n} (${c.h}) ${c.plat} ${c.fol} ${c.fee} ${c.st}`).join('\n'):'See Creator CRM';
-  const budget=budgetData?`Total: $${budgetData.total.toLocaleString()} | Spent: $${budgetData.lines.reduce((a,b)=>a+b.spent,0).toLocaleString()}`:'See Budget';
-  const campaigns=CAMPAIGNS_DATA?CAMPAIGNS_DATA.map(c=>`${c.name} (${c.status}): ${c.goal} | $${c.budget.toLocaleString()} budget | Sound: ${c.sound}`).join('\n'):'See Campaign Manager';
-  const sonyData=document.getElementById("report-paste")?.value?.trim()||"";
-  return `WIREHOUSE MEDIA — AK PLATFORM DATA (Live Pull)\n\nCON CORA GALA × KAROL G · Mar 19–28 2026\nReach: 43.9M+ | Collab reel: 32.9M views 1.6M likes\nTikTok: 4,370 creates · 1.1M views (Try Sleeping)\nWorldwide streaming: +21% | Spotify +24% | Apple +22%\nLatin: +59% | Spotify Latin +66% | Shazam Latin +221%\nSpotify follower spike: +6,045 on Mar 23 (+93.6% vs avg)\nTop creator: @tsaone_mamogale 261.6K views 49K likes (male cover)\n\nSTREAMING (worldwide 3/20–3/26):\nAll: 620.2K (+21%) | Spotify: 339.1K (+24%) | Apple: 208.4K (+22%) | TikTok Views: 4.5M (+34%) | Vevo: 277.6K (+17%)\n\nLATIN (3/20–3/26):\nAll: 42.6K (+59%) | Spotify: 33.7K (+66%) | Apple: 6.3K (+49%) | TikTok: 420.4K (+24%)\n\nCAMPAIGNS:\n${campaigns}\n\nCREATORS:\n${creators}\n\nBUDGET: ${budget}\n\nPLATFORM STATS:\nSpotify: 36.6M monthly listeners · +8.3% (30d) · 1.2B+ streams\nInstagram: 28M followers · 0.61% eng\nTikTok: 8M followers · 50.5M total likes\nGirl on Fire: 1.71M TikTok creates · 932M views\n${sonyData?'\nSONY/DSP DATA:\n'+sonyData:''}`;
-}
+
 window.sendReportToJessi=()=>{
   const txt=document.getElementById("report-paste")?.value?.trim();
   if(!txt){alert("Paste Sony/DSP data first then click Send");return;}
@@ -2420,6 +2969,236 @@ function pgViral(){
 </div>`;
 }
 
+// ── Google Drive / Docs / Sheets export helpers ──
+function gDocUrl(title, body){
+  // Google Docs new doc with title — content pasted after open
+  return `https://docs.google.com/document/create?title=${encodeURIComponent(title)}`;
+}
+function gSheetUrl(title){
+  return `https://docs.google.com/spreadsheets/create?title=${encodeURIComponent(title)}`;
+}
+
+// Open a new Google Doc and copy content to clipboard so user can paste
+window.saveToGoogleDoc=(title, body)=> {
+  const text = typeof body === 'string' ? body : JSON.stringify(body, null, 2);
+  // Copy to clipboard using both methods
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  } catch(e) {
+    navigator.clipboard?.writeText(text);
+  }
+  showGDriveToast('📄 Copied! Google Doc opening → paste with Cmd+V / Ctrl+V to save.');
+  window.open('https://docs.google.com/document/create?title='+encodeURIComponent(title), '_blank');
+};
+
+window.saveToGoogleSheet=(title, rows) => {
+  // TSV format for Google Sheets paste
+  const tsv = (rows||[]).map(r=>(r||[]).map(c=>String(c||'').replace(/\t/g,' ')).join('\t')).join('\n');
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = tsv;
+    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  } catch(e) {
+    navigator.clipboard?.writeText(tsv);
+  }
+  showGDriveToast('📊 Copied as spreadsheet! Google Sheet opening → paste with Cmd+V / Ctrl+V, then Save to Drive.');
+  window.open('https://docs.google.com/spreadsheets/create?title='+encodeURIComponent(title), '_blank');
+};
+
+window.showGDriveToast=(msg)=>{
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#a07fd4;color:#fff;padding:10px 18px;border-radius:8px;font-size:11px;font-family:Syne,sans-serif;font-weight:700;z-index:9999;max-width:380px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.4);animation:fadeInUp .3s ease';
+  t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 5000);
+};
+
+// ── Format helpers for each section ──
+window.exportJessiToDrive=(mode)=>{
+  if(!aiHist.length){showGDriveToast('No Hey Jessi responses to save yet.');return;}
+  const title='Hey Jessi — '+new Date().toLocaleDateString();
+  const body=aiHist.map(m=>(m.role==='user'?'YOU':'JESSI')+': '+m.content).join('\n\n---\n\n');
+  if(mode==='doc'){saveToGoogleDoc(title,body);}
+  else{saveToGoogleSheet(title,[['Role','Message'],...aiHist.map(m=>[m.role,m.content.substring(0,500)])]);}
+};
+
+window.exportDraftToDrive=(id,mode)=>{
+  const d=DRAFTS_DATA&&DRAFTS_DATA.find(x=>x.id===id);
+  if(!d){showGDriveToast('Draft not found.');return;}
+  const title=d.title+' — Content Draft';
+  const lines=['CONTENT DRAFT: '+d.title,'Platform: '+d.platform,'Type: '+d.type,'Status: '+d.status,'Date: '+d.date,'','CAPTION:',d.cap||'','','TAGS:',(d.tags||[]).join(' '),'','LINKS:',(d.links||[]).map(l=>l.l+': '+l.u).join('\n'),'','EDITS:',(d.edits||[]).join('\n')];
+  saveToGoogleDoc(title,lines.join('\n'));
+};
+
+window.exportCampaignToDrive=(id,mode)=>{
+  const c=(CAMPAIGNS_DATA&&CAMPAIGNS_DATA.find(x=>x.id===id))||CAMPAIGNS_DATA?.[0];
+  if(!c){showGDriveToast('Campaign not found.');return;}
+  const title=c.name+' — Campaign';
+  if(mode==='sheet'){
+    saveToGoogleSheet(title,[
+      ['Campaign','Status','Goal','Budget','Spent','Remaining','Sound','Platforms'],
+      [c.name,c.status,c.goal,'$'+c.budget,'$'+c.spent,'$'+(c.budget-c.spent),c.sound,(c.platforms||[]).join(', ')]
+    ]);
+  } else {
+    const kpis=Object.entries(c.kpis||{}).map(([k,v])=>k+': '+v).join(', ');
+    const body='CAMPAIGN: '+c.name+'\nStatus: '+c.status+'\nGoal: '+c.goal+'\nBudget: $'+c.budget+' | Spent: $'+c.spent+'\nSound: '+c.sound+'\nPlatforms: '+(c.platforms||[]).join(', ')+'\nCreators: '+(c.creators||[]).join(', ')+'\nKPIs: '+kpis;
+    saveToGoogleDoc(title,body);
+  }
+};
+
+window.exportBudgetToDrive=()=>{
+  if(!budgetData){showGDriveToast('No budget data.');return;}
+  const title='AK Budget Tracker — '+new Date().toLocaleDateString();
+  const rows=[
+    ['Name','Campaign','Platform','Budget','Spent','Remaining','Status','Agent','Notes'],
+    ...budgetData.lines.map(l=>[l.name,l.camp,l.platform,'$'+l.total,'$'+l.spent,'$'+(l.total-l.spent),l.st,l.agent||'',l.notes||''])
+  ];
+  saveToGoogleSheet(title, rows);
+};
+
+window.exportCRMToDrive=()=>{
+  if(!crmData){showGDriveToast('No CRM data.');return;}
+  const title='AK Creator CRM — '+new Date().toLocaleDateString();
+  const rows=[
+    ['Name','Handle','Platform','Followers','Engagement','Fee','Campaign','Status','Notes'],
+    ...crmData.map(c=>[c.n,c.h,c.plat,c.fol,c.eng,c.fee,c.camp,c.st,c.notes||''])
+  ];
+  saveToGoogleSheet(title, rows);
+};
+
+window.exportAirtableToDrive=(table)=>{
+  showGDriveToast('Fetching '+table+' from Airtable…');
+  AT.list(table).then(records=>{
+    if(!records.length){showGDriveToast('No records found in '+table);return;}
+    const fields=Object.keys(records[0].fields||{});
+    const rows=[fields,...records.map(r=>fields.map(f=>String(r.fields[f]||'')))];
+    saveToGoogleSheet('Airtable — '+table+' — '+new Date().toLocaleDateString(), rows);
+  }).catch(e=>showGDriveToast('Airtable error: '+e.message));
+};
+
+window.exportContractsToDrive=()=>{
+  if(typeof contractsData==='undefined'){showGDriveToast('No contracts data.');return;}
+  const title='AK Contracts — '+new Date().toLocaleDateString();
+  const rows=[
+    ['Description','Type','Campaign','Rate','Start','Expiry','Status','Notes','Drive Link'],
+    ...contractsData.map(c=>[c.desc,c.type,c.camp,c.rate,c.start,c.expiry,c.status,c.notes,c.drive])
+  ];
+  saveToGoogleSheet(title, rows);
+};
+
+// ── Generic page content exporter ──
+window.exportPageToDrive=(pageId, mode)=>{
+  const titles={
+    overview:'AK Overview',campaigns:'Campaign Manager',crm:'Creator CRM',
+    budget:'Budget Tracker',calendar:'Content Calendar',drafts:'Content Drafts',
+    contracts:'Contracts',partners:'Partners & APIs',dsp:'DSP & Streaming',
+    catalogue:'Full Catalogue',chartex:'ChartEx Session',campaignreport:'Campaign Report',
+    viral:'Viral Analyzer',listening:'Social Listening',platforms:'Platforms',ai:'Hey Jessi'
+  };
+  const title=(titles[pageId]||pageId)+' — AK Intelligence';
+
+  if(pageId==='all'){
+    // Full export — everything
+    const allContent=[
+      '=== AK ARTIST INTELLIGENCE — FULL EXPORT ===',
+      'Date: '+new Date().toLocaleString(),
+      '',
+      '--- CAMPAIGNS ---',
+      (CAMPAIGNS_DATA||[]).map(c=>c.name+' | '+c.status+' | $'+c.budget+' budget | $'+c.spent+' spent | Sound: '+c.sound).join('\n'),
+      '',
+      '--- CREATORS CRM ---',
+      (crmData||[]).map(c=>c.n+' | '+c.h+' | '+c.plat+' | '+c.fol+' | '+c.fee+' | '+c.st).join('\n'),
+      '',
+      '--- BUDGET ---',
+      'Total: $'+(budgetData?.total||0),
+      (budgetData?.lines||[]).map(l=>l.name+' | $'+l.total+' | $'+l.spent+' spent | '+l.st).join('\n'),
+      '',
+      '--- HEY JESSI CHAT LOG ---',
+      aiHist.map(m=>(m.role==='user'?'YOU':'JESSI')+': '+m.content.substring(0,300)).join('\n\n'),
+    ].join('\n');
+    saveToGoogleDoc('AK Full Export — '+new Date().toLocaleDateString(), allContent);
+    return;
+  }
+
+  if(mode==='sheet'){
+    // Page-specific sheet exports
+    const sheetData={
+      overview:[['Metric','Value'],['Spotify Monthly Listeners','36.6M'],['Instagram Followers','28M'],['TikTok Followers','8M'],['Total Mentions Est.','~2.4M']],
+      dsp:[['Platform','Monthly Listeners','Change'],['Spotify','36.6M','+8.3%'],['Apple Music','~22M','+5.1%'],['YouTube Music','~7M','+12%'],['Amazon Music','~14M','+4.2%']],
+      platforms:[['Platform','Handle','Followers','Notes'],['Instagram','@aliciakeys','28M','0.61% eng'],['TikTok','@aliciakeys','8M','50.5M likes'],['Spotify','Alicia Keys','36.6M monthly','1.2B streams'],['YouTube','@AliciaKeys','~7M','Verified'],['Facebook','Alicia Keys','~35M','Verified']],
+      campaignreport:[['Metric','Worldwide','Latin'],['All Streaming','620.2K +21%','42.6K +59%'],['Spotify','339.1K +24%','33.7K +66%'],['Apple Music','208.4K +22%','6.3K +49%'],['TikTok Views','4.5M +34%','420.4K +24%'],['Total Reach','43.9M+',''],['TikTok Creates','4370','']],
+      catalogue:(()=>{const rows=[['Song','ChartEx','TikTok Sound','Spotify','Apple','YouTube']];(ALBUMS||[]).forEach(al=>al.songs.forEach(s=>rows.push([s.s,s.cx||'',s.tk||'',s.sp||'',s.am||'',s.yt||''])));return rows;})(),
+    };
+    const rows=sheetData[pageId]||[['Page',pageId],['Exported',new Date().toLocaleString()]];
+    saveToGoogleSheet(title, rows);
+  } else {
+    // Generic doc — capture visible page text + context
+    const main=document.getElementById('main');
+    const text=main?main.innerText.replace(/📄.*|📊.*|💾.*|Save to Drive.*/g,'').trim():'';
+    saveToGoogleDoc(title, '=== '+title.toUpperCase()+' ===\nExported: '+new Date().toLocaleString()+'\n\n'+text.substring(0,8000));
+  }
+};
+
+// ── Additional export functions ──
+window.exportAllCampaignsToDrive=()=>{
+  const rows=[['Name','Status','Goal','Budget','Spent','Remaining','Sound','Platforms','Creators'],
+    ...(CAMPAIGNS_DATA||[]).map(c=>[c.name,c.status,c.goal,'$'+c.budget,'$'+c.spent,'$'+(c.budget-c.spent),c.sound,(c.platforms||[]).join(', '),(c.creators||[]).join(', ')])
+  ];
+  saveToGoogleSheet('All Campaigns — AK Intelligence', rows);
+};
+
+window.exportCRMReportToDrive=()=>{
+  const lines=['=== CREATOR CRM REPORT ===','Date: '+new Date().toLocaleString(),'Total Creators: '+(crmData||[]).length,'','--- CREATORS ---',
+    ...(crmData||[]).map(c=>c.n+' ('+c.h+') | '+c.plat+' | '+c.fol+' followers | '+c.fee+' | Campaign: '+c.camp+' | Status: '+c.st+(c.notes?'\nNotes: '+c.notes:''))
+  ];
+  saveToGoogleDoc('Creator CRM Report — '+new Date().toLocaleDateString(), lines.join('\n'));
+};
+
+window.exportCalendarToDrive=()=>{
+  const CAL_DATA=typeof CAL!=='undefined'?CAL:{};
+  const rows=[['Day','Event','Type','Status','Caption']];
+  Object.entries(CAL_DATA).forEach(([d,ev])=>{
+    rows.push(['Apr '+d,ev.l,ev.t,ev.st,ev.cap||'']);
+  });
+  saveToGoogleSheet('Content Calendar — AK Intelligence', rows);
+};
+
+window.exportAllDraftsToDrive=()=>{
+  const all=(typeof DRAFTS_DATA!=='undefined'?DRAFTS_DATA:[]);
+  if(!all.length){showGDriveToast('No drafts to export yet.');return;}
+  const lines=['=== CONTENT DRAFTS — AK INTELLIGENCE ===','Date: '+new Date().toLocaleString(),'Total Drafts: '+all.length,''];
+  all.forEach(d=>{
+    lines.push('--- '+d.title+' ---');
+    lines.push('Platform: '+d.platform+' | Type: '+d.type+' | Status: '+d.status+' | Date: '+d.date);
+    lines.push('Caption: '+(d.cap||''));
+    lines.push('Tags: '+(d.tags||[]).join(' '));
+    lines.push('Links: '+(d.links||[]).map(l=>l.l+': '+l.u).join(' | '));
+    lines.push('');
+  });
+  saveToGoogleDoc('All Content Drafts — '+new Date().toLocaleDateString(), lines.join('\n'));
+};
+
+// ── Campaign budget live update ──
+window.updateCampBudget=(id,val)=>{
+  const c=CAMPAIGNS_DATA.find(x=>x.id===id);
+  if(!c)return;
+  c.budget=parseInt(val.replace(/,/g,''))||0;
+  saveCampaignsLocal();
+  // Refresh budget bar in card
+  const bars=document.querySelectorAll('[data-camp-id="'+id+'"]');
+  bars.forEach(b=>b.style.width=Math.min(Math.round(c.spent/c.budget*100),100)+'%');
+};
+
 // ═══ PAGE DISPATCH ═══
 
 const getPage=id=>({
@@ -2443,6 +3222,9 @@ function afterRender(id){
   if(id==="ai"){
     renderJessiSessions();
     const msgs=document.getElementById("ai-msgs");if(msgs)msgs.scrollTop=msgs.scrollHeight;
+  }
+  if(id==="campaignreport"){
+    setTimeout(()=>switchCampaignReport('all'),50);
   }
 }
 

@@ -3230,5 +3230,1177 @@ function afterRender(id){
 
 buildNav();renderPage();applyTheme(_theme);
 </script>
+<style>
+[data-theme="light"]{--gold:#7B5EA7;--gl:#9b7fc7;--gd:#7B5EA722;--purple:#7B5EA7;--purple-deep:#5a3f8a;--purple-dim:#7B5EA714;--bg:#f5f0fa;--bg2:#ede5f7;--bg3:#e4d9f0;--card:#fff;--bdr:#d4c4e8;--tx:#1a0a2e;--tx2:#4a2e6a;--tx3:#8060a0;--dim:#c8b8e0}
+.sidebar.collapsed{width:0!important;overflow:hidden!important;border:none!important}
+.sidebar.collapsed *{display:none!important}
+.sb-toggle{display:none!important}
+.hdr-toggle{display:flex;align-items:center;justify-content:center;width:30px;height:30px;min-width:30px;background:none;border:1px solid var(--bdr);border-radius:6px;color:var(--tx2);cursor:pointer;font-size:14px;flex-shrink:0;transition:all .14s;margin-right:4px}
+.hdr-toggle:hover{color:var(--purple);border-color:var(--purple)}
+</style>
+<script>
+(function(){
+var old=document.querySelector('.sb-toggle');if(old)old.style.display='none';
+var _theme=localStorage.getItem('wm_theme')||'dark';
+function _applyTheme(t){_theme=t;if(t==='light')document.documentElement.setAttribute('data-theme','light');else document.documentElement.removeAttribute('data-theme');localStorage.setItem('wm_theme',t);var btn=document.getElementById('wm-theme-btn');if(btn)btn.innerHTML=t==='dark'?'&#9728;&#xFE0F; Light':'&#127769; Dark';}
+function _injectThemeBtn(){var sb=document.getElementById('sidebar');if(!sb)return;if(document.getElementById('wm-theme-btn'))return;var old2=sb.querySelector('.sb-bottom');if(old2)old2.remove();var wrap=document.createElement('div');wrap.className='sb-bottom';wrap.style.cssText='padding:10px;border-top:1px solid var(--bdr);flex-shrink:0';var btn=document.createElement('button');btn.id='wm-theme-btn';btn.onclick=function(){_applyTheme(_theme==='dark'?'light':'dark');};btn.style.cssText='background:none;border:1px solid var(--bdr);border-radius:6px;color:var(--tx2);cursor:pointer;padding:6px 9px;font-size:11px;width:100%;display:flex;align-items:center;gap:7px;transition:all .14s;font-family:Syne,sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase';btn.innerHTML=_theme==='dark'?'&#9728;&#xFE0F; Light':'&#127769; Dark';wrap.appendChild(btn);var sis=sb.querySelectorAll('.si');var partnersEl=null;sis.forEach(function(el){if(el.innerText&&el.innerText.indexOf('Partners')>=0)partnersEl=el;});if(partnersEl)partnersEl.after(wrap);else sb.appendChild(wrap);}
+function _injectHdrToggle(){var hdr=document.querySelector('.hdr');if(!hdr||document.getElementById('hdr-nav-toggle'))return;var logo=hdr.querySelector('.logo-l');if(!logo)return;var tog=document.createElement('button');tog.id='hdr-nav-toggle';tog.className='hdr-toggle';tog.innerHTML='&#9776;';tog.onclick=function(){var sb=document.getElementById('sidebar');if(!sb)return;var col=sb.classList.toggle('collapsed');tog.innerHTML=col?'&#9658;':'&#9776;';localStorage.setItem('wm_sb_col',col?'1':'0');};hdr.insertBefore(tog,logo);if(localStorage.getItem('wm_sb_col')==='1'){var sb=document.getElementById('sidebar');if(sb)sb.classList.add('collapsed');tog.innerHTML='&#9658;';}}
+var PINS=['2026','1234','5678'];
+if(localStorage.getItem('wm_auth')!=='ok'){document.addEventListener('DOMContentLoaded',function(){var app=document.getElementById('app');if(app)app.style.display='none';var o=document.createElement('div');o.style.cssText='position:fixed;inset:0;background:#080610;display:flex;align-items:center;justify-content:center;z-index:99999;font-family:Syne,sans-serif';o.innerHTML='<div style="text-align:center;padding:40px;max-width:360px;width:90%"><div style="font-family:Playfair Display,serif;font-size:50px;color:#a07fd4;margin-bottom:6px">AK</div><div style="font-size:9px;color:#4a3868;letter-spacing:.25em;text-transform:uppercase;margin-bottom:40px">Artist Intelligence &middot; Wirehouse Media</div><div style="font-size:11px;color:#6a5a8a;margin-bottom:18px">Enter your access code</div><input id="wm-pin-inp" type="password" maxlength="6" autocomplete="off" style="width:150px;background:#0f0f1f;border:1px solid #a07fd444;border-radius:10px;padding:16px 20px;font-size:26px;color:#a07fd4;font-family:DM Mono,monospace;text-align:center;outline:none;letter-spacing:.2em;display:block;margin:0 auto 18px"><button id="wm-pin-btn" style="padding:13px 36px;border-radius:9px;border:none;background:#a07fd4;color:#fff;font-family:Syne,sans-serif;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:.12em;text-transform:uppercase">Enter</button><div id="wm-pin-err" style="font-size:10px;color:#f09a9a;margin-top:16px;min-height:18px"></div></div>';document.body.appendChild(o);function tryPin(){var v=document.getElementById('wm-pin-inp').value.trim();if(PINS.indexOf(v)>=0){localStorage.setItem('wm_auth','ok');o.style.transition='opacity .4s';o.style.opacity='0';setTimeout(function(){o.remove();if(app){app.style.display='';if(typeof buildNav==='function'){buildNav();if(typeof renderPage==='function')renderPage();}}},420);}else{document.getElementById('wm-pin-err').textContent='Incorrect code';document.getElementById('wm-pin-inp').value='';}}document.getElementById('wm-pin-btn').onclick=tryPin;document.getElementById('wm-pin-inp').onkeydown=function(e){if(e.key==='Enter')tryPin();};setTimeout(function(){document.getElementById('wm-pin-inp').focus();},150);});}
+window.sonyData=JSON.parse(localStorage.getItem('wm_sony_data')||'[]');
+window._persist=function(){try{if(typeof aiHist!=='undefined')localStorage.setItem('wm_ai_hist',JSON.stringify(aiHist.slice(-100)));if(typeof CAMPAIGNS_DATA!=='undefined')localStorage.setItem('wm_camps',JSON.stringify(CAMPAIGNS_DATA));if(typeof crmData!=='undefined')localStorage.setItem('wm_crm_d',JSON.stringify(crmData));if(typeof topPosts!=='undefined')localStorage.setItem('wm_top_posts',JSON.stringify(topPosts));if(window.sonyData)localStorage.setItem('wm_sony_data',JSON.stringify(window.sonyData));}catch(e){}};
+window.addEventListener('beforeunload',window._persist);setInterval(window._persist,20000);
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){try{var hh=localStorage.getItem('wm_ai_hist');if(hh&&typeof aiHist!=='undefined'&&!aiHist.length){var p=JSON.parse(hh);if(p&&p.length)aiHist.push.apply(aiHist,p);}}catch(e){}},900);});
+window.showGDriveToast=function(msg){var ex=document.getElementById('wm-toast');if(ex)ex.remove();var t=document.createElement('div');t.id='wm-toast';t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#a07fd4;color:#fff;padding:11px 22px;border-radius:9px;font-size:11px;font-family:Syne,sans-serif;font-weight:700;z-index:99999;max-width:420px;text-align:center;box-shadow:0 6px 28px rgba(0,0,0,.5)';t.innerHTML=msg;document.body.appendChild(t);setTimeout(function(){t.remove();},4500);};
+window._closeDM=function(){var m=document.getElementById('wm-dm');if(m)m.remove();};
+window._dvu='';window._dvuS='';
+window._showDriveModal=function(title,text,docUrl,sheetUrl){var ex=document.getElementById('wm-dm');if(ex)ex.remove();window._dvu=docUrl||'';window._dvuS=sheetUrl||docUrl||'';var m=document.createElement('div');m.id='wm-dm';m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:99998;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)';var box=document.createElement('div');box.style.cssText='background:#0f0f1f;border:1px solid #a07fd444;border-radius:12px;padding:24px;max-width:680px;width:94%;max-height:90vh;display:flex;flex-direction:column;gap:12px';var hdr2=document.createElement('div');hdr2.style.cssText='display:flex;justify-content:space-between;align-items:center';hdr2.innerHTML='<div style="font-family:Syne,sans-serif;font-size:13px;font-weight:700;color:#a07fd4">&#128196; '+title+'</div>';var cls=document.createElement('button');cls.innerHTML='&#215;';cls.style.cssText='background:none;border:none;color:#888;cursor:pointer;font-size:24px;line-height:1;padding:0';cls.onclick=window._closeDM;hdr2.appendChild(cls);box.appendChild(hdr2);var ins=document.createElement('div');ins.style.cssText='font-size:10px;color:#6a4a9a;font-family:Syne,sans-serif';ins.textContent='Click inside \u2192 Cmd+A \u2192 Cmd+C to copy \u2192 Open Doc or Sheet \u2192 paste with Cmd+V';box.appendChild(ins);var ta=document.createElement('textarea');ta.style.cssText='background:#05050d;border:1px solid #1a1030;border-radius:8px;padding:12px;font-family:DM Mono,monospace;font-size:9px;color:#c0c0c0;min-height:260px;max-height:380px;resize:vertical;width:100%;box-sizing:border-box;line-height:1.8';ta.value=(text||'');ta.onclick=function(){this.select();this.setSelectionRange(0,999999);};box.appendChild(ta);var row=document.createElement('div');row.style.cssText='display:flex;gap:8px';var btnC=document.createElement('button');btnC.style.cssText='flex:1;padding:11px;border-radius:8px;border:none;background:#a07fd4;color:#fff;font-family:Syne,sans-serif;font-weight:700;font-size:10px;cursor:pointer;text-transform:uppercase;letter-spacing:.08em';btnC.innerHTML='&#128203; Select + Copy';btnC.onclick=function(){var b=this;ta.select();ta.setSelectionRange(0,999999);if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(ta.value).then(function(){b.innerHTML='&#10003; Copied!';b.style.background='#a8f0c8';b.style.color='#000';setTimeout(function(){b.innerHTML='&#128203; Select + Copy';b.style.background='#a07fd4';b.style.color='#fff';},2500);});}else{try{document.execCommand('copy');}catch(e){}b.innerHTML='&#10003; Copied!';b.style.background='#a8f0c8';b.style.color='#000';setTimeout(function(){b.innerHTML='&#128203; Select + Copy';b.style.background='#a07fd4';b.style.color='#fff';},2500);}};row.appendChild(btnC);if(docUrl){var bd=document.createElement('button');bd.style.cssText='flex:1;padding:11px;border-radius:8px;border:1px solid #4285F433;background:none;color:#4285F4;font-family:Syne,sans-serif;font-weight:700;font-size:10px;cursor:pointer;text-transform:uppercase;letter-spacing:.08em';bd.innerHTML='&#128196; Open Doc';bd.onclick=function(){window.open(window._dvu,'_blank');};row.appendChild(bd);}if(sheetUrl&&sheetUrl!==docUrl){var bs=document.createElement('button');bs.style.cssText='flex:1;padding:11px;border-radius:8px;border:1px solid #0F9D5833;background:none;color:#0F9D58;font-family:Syne,sans-serif;font-weight:700;font-size:10px;cursor:pointer;text-transform:uppercase;letter-spacing:.08em';bs.innerHTML='&#128202; Open Sheet';bs.onclick=function(){window.open(window._dvuS,'_blank');};row.appendChild(bs);}var bc=document.createElement('button');bc.style.cssText='flex:2;padding:11px;border-radius:8px;border:none;background:#4285F4;color:#fff;font-family:Syne,sans-serif;font-weight:700;font-size:10px;cursor:pointer;text-transform:uppercase;letter-spacing:.08em';bc.innerHTML='&#10003; Copy + Open';bc.onclick=function(){ta.select();ta.setSelectionRange(0,999999);var tgt=window._dvuS||window._dvu;function after(){window.open(tgt,'_blank');window._closeDM();window.showGDriveToast('Copied! Paste with Cmd+V');}if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(ta.value).then(after);}else{try{document.execCommand('copy');}catch(e){}after();}};row.appendChild(bc);box.appendChild(row);m.appendChild(box);document.body.appendChild(m);m.addEventListener('click',function(e){if(e.target===m)m.remove();});setTimeout(function(){ta.select();ta.setSelectionRange(0,999999);},120);};
+function _mk(t,sheet){return sheet?'https://docs.google.com/spreadsheets/create?title='+encodeURIComponent(t):'https://docs.google.com/document/create?title='+encodeURIComponent(t);}
+function _hdr(t){return '=== WIREHOUSE MEDIA / AK ARTIST INTELLIGENCE ===\n'+t+'\nExported: '+new Date().toLocaleString()+'\n'+'='.repeat(50)+'\n\n';}
+window.saveToGoogleDoc=function(t,b){window._showDriveModal(t,typeof b==='string'?b:JSON.stringify(b,null,2),_mk(t,false),null);};
+window.saveToGoogleSheet=function(t,rows){var tsv=(rows||[]).map(function(r){return(r||[]).map(function(c){return String(c===null||c===undefined?'':c);}).join('\t');}).join('\n');window._showDriveModal(t,tsv,null,_mk(t,true));};
+window.exportPageToDrive=function(pageId,mode){var T=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});if(pageId==='campaigns'){var t='Campaign Manager \u2014 '+T;if(mode==='sheet'||!mode){var rows=[['Name','Status','Goal','Budget','Spent','Remaining','Sound','Platforms']];if(typeof CAMPAIGNS_DATA!=='undefined')CAMPAIGNS_DATA.forEach(function(c){rows.push([c.name,c.status,c.goal,'$'+c.budget,'$'+c.spent,'$'+(c.budget-c.spent),c.sound,(c.platforms||[]).join(', ')]);});if(rows.length===1)rows.push(['No campaigns']);return saveToGoogleSheet(t,rows);}var body=_hdr(t);if(typeof CAMPAIGNS_DATA!=='undefined')CAMPAIGNS_DATA.forEach(function(c,i){body+=(i+1)+'. '+c.name+'\n   Status: '+c.status+' | Budget: $'+c.budget+' | Spent: $'+c.spent+'\n   Goal: '+c.goal+'\n\n';});return saveToGoogleDoc(t,body);}if(pageId==='crm'){var t='Creator CRM \u2014 '+T;var rows=[['Name','Handle','Platform','Followers','Engagement','Fee','Campaign','Status','Notes']];if(typeof crmData!=='undefined')crmData.forEach(function(c){rows.push([c.n,c.h,c.plat,c.fol,c.eng||'',c.fee,c.camp,c.st,c.notes||'']);});if(rows.length===1)rows.push(['No creators']);if(mode==='sheet'||!mode)return saveToGoogleSheet(t,rows);var body=_hdr(t);if(typeof crmData!=='undefined')crmData.forEach(function(c,i){body+=(i+1)+'. '+c.n+' ('+c.h+')\n   '+c.plat+' | '+c.fol+' | '+c.fee+' | '+c.camp+' | '+c.st+'\n\n';});return saveToGoogleDoc(t,body);}if(pageId==='budget'){var t='Budget Tracker \u2014 '+T;var totalB=typeof budgetData!=='undefined'?budgetData.total:45000;var totalS=typeof budgetData!=='undefined'?budgetData.lines.reduce(function(a,b){return a+b.spent;},0):0;if(mode==='sheet'||!mode){var rows=[['Line Item','Campaign','Platform','Budget','Spent','Remaining','Status'],['TOTAL','','','$'+totalB,'$'+totalS,'$'+(totalB-totalS),'']];if(typeof budgetData!=='undefined')budgetData.lines.forEach(function(l){rows.splice(1,0,[l.name,l.camp,l.platform,'$'+l.total,'$'+l.spent,'$'+(l.total-l.spent),l.st]);});return saveToGoogleSheet(t,rows);}var body=_hdr(t)+'Total: $'+totalB+'\nSpent: $'+totalS+'\n\nLINE ITEMS\n';if(typeof budgetData!=='undefined')budgetData.lines.forEach(function(l){body+='\u2022 '+l.name+' | $'+l.total+' | $'+l.spent+' spent\n';});return saveToGoogleDoc(t,body);}if(pageId==='calendar'){var t='Content Calendar \u2014 '+T;var CAL_DATA=typeof CAL!=='undefined'?CAL:{};var rows=[['Day','Date','Event','Type','Status','Caption']];Object.entries(CAL_DATA).sort(function(a,b){return a[0]-b[0];}).forEach(function(entry){var d=entry[0],ev=entry[1];rows.push(['Apr '+d,'April '+d+' 2026',ev.l,ev.t,ev.st||'pending',(ev.cap||'').substring(0,300)]);});if(mode==='sheet'||!mode)return saveToGoogleSheet(t,rows);var body=_hdr(t)+'CONTENT CALENDAR \u2014 APRIL 2026\n\n';Object.entries(CAL_DATA).sort(function(a,b){return a[0]-b[0];}).forEach(function(entry){var d=entry[0],ev=entry[1];body+='Apr '+d+' \u2014 '+ev.l+' ('+ev.t+') ['+(ev.st||'pending')+']\n'+(ev.cap?'Caption: '+ev.cap.substring(0,200)+'\n':'')+'\n';});return saveToGoogleDoc(t,body);}if(pageId==='drafts'){var t='Content Drafts \u2014 '+T;var body=_hdr(t);if(typeof DRAFTS_DATA!=='undefined'&&DRAFTS_DATA.length){DRAFTS_DATA.forEach(function(d,i){body+=(i+1)+'. '+d.title+' ['+d.status+']\n   Platform: '+d.platform+' | Date: '+d.date+'\n'+(d.cap?'   Caption: '+d.cap.substring(0,300)+'\n':'')+'\n';});}else body+='No drafts yet.';return saveToGoogleDoc(t,body);}if(pageId==='contracts'){var t='Contracts \u2014 '+T;var rows=[['Description','Type','Campaign','Rate','Start','Expiry','Status','Notes']];if(typeof contractsData!=='undefined')contractsData.forEach(function(c){rows.push([c.desc,c.type,c.camp,c.rate,c.start,c.expiry,c.status,c.notes||'']);});if(rows.length===1)rows.push(['No contracts']);if(mode==='sheet'||!mode)return saveToGoogleSheet(t,rows);var body=_hdr(t);if(typeof contractsData!=='undefined')contractsData.forEach(function(c,i){body+=(i+1)+'. '+c.desc+'\n   '+c.type+' | '+c.camp+' | '+c.rate+'\n   '+c.start+' \u2192 '+c.expiry+' | '+c.status+'\n\n';});return saveToGoogleDoc(t,body);}if(pageId==='ai'){if(typeof aiHist==='undefined'||!aiHist.length){showGDriveToast('No Jessi conversation yet');return;}var t='Hey Jessi Chat \u2014 '+T;if(mode==='sheet')return saveToGoogleSheet(t,[['#','Role','Message']].concat(aiHist.map(function(m,i){return[i+1,m.role==='user'?'YOU':'JESSI',m.content.substring(0,500)];})));return saveToGoogleDoc(t,_hdr(t)+aiHist.map(function(m,i){return(i+1)+'. '+(m.role==='user'?'\u2014 YOU':'\u2728 JESSI')+':\n'+m.content;}).join('\n\n---\n\n'));}if(pageId==='campaignreport'){var t='Campaign Report \u2014 '+T;var sony='';if(window.sonyData&&window.sonyData.length){sony='\n\nSONY DATA:\n'+window.sonyData.slice(-5).map(function(e){return'['+e.date+'] '+e.label+'\n'+e.text.substring(0,400);}).join('\n---\n');}if(mode==='sheet'){var rows=[['KPI','Value'],['Total Campaign Reach','43.9M+'],['Total Mentions','~2.4M'],['Worldwide Streaming','+21%'],['TikTok Creates','4,370'],[''],['Worldwide Streaming (3/20-3/26)','Value','vs Prior'],['All Streaming','620.2K','+21%'],['Spotify','339.1K','+24%'],['Apple Music','208.4K','+22%'],['TikTok Views','4.5M','+34%'],[''],['Latin Market','Value','vs Prior'],['All Streaming','42.6K','+59%'],['Spotify Latin','33.7K','+66%'],['Shazam Latin','90','+221%'],[''],['CREATORS','Handle','Status']];if(typeof crmData!=='undefined')crmData.forEach(function(c){rows.push([c.n,c.h+' ('+c.plat+')',c.st]);});if(window.sonyData&&window.sonyData.length){rows.push([''],['SONY DATA','Date','']);window.sonyData.forEach(function(e){rows.push([e.label,e.date,e.text.substring(0,300)]);});}return saveToGoogleSheet(t,rows);}return saveToGoogleDoc(t,_hdr(t)+'CON CORA GALA x KAROL G\nMarch 19-28, 2026\n\nKPIs\n- Total Campaign Reach: 43.9M+\n- Total Mentions: ~2.4M\n- Worldwide Streaming: +21%\n- TikTok Creates: 4,370\n\nWorldwide: All +21% | Spotify +24% | Apple +22%\n\nLatin: All +59% | Spotify +66% | Shazam +221%'+sony);}var el=document.getElementById('main');var txt=el?el.innerText.replace(/\n{3,}/g,'\n\n').trim():'';if(mode==='sheet')return saveToGoogleSheet(pageId+' \u2014 '+T,[['Content'],[txt.substring(0,4000)]]);return saveToGoogleDoc(pageId+' \u2014 '+T,_hdr(pageId.toUpperCase())+txt.substring(0,7000));};
+window.exportJessiToDrive=function(m){window.exportPageToDrive('ai',m);};
+window.exportAllCampaignsToDrive=function(m){window.exportPageToDrive('campaigns',m||'sheet');};
+window.exportCRMToDrive=function(){window.exportPageToDrive('crm','sheet');};
+window.exportCRMReportToDrive=function(){window.exportPageToDrive('crm','doc');};
+window.exportBudgetToDrive=function(){window.exportPageToDrive('budget','sheet');};
+window.exportCalendarToDrive=function(){window.exportPageToDrive('calendar','sheet');};
+window.exportAllDraftsToDrive=function(){window.exportPageToDrive('drafts');};
+window.exportContractsToDrive=function(){window.exportPageToDrive('contracts','sheet');};
+window.sonyData=window.sonyData||JSON.parse(localStorage.getItem('wm_sony_data')||'[]');
+window.toggleSonyPanel=function(){var p=document.getElementById('sony-panel');if(p)p.style.display=p.style.display==='none'?'block':'none';};
+window.saveSonyEntry=function(){var p1=document.getElementById('sony-paste'),p2=document.getElementById('sony-date'),p3=document.getElementById('sony-label');var text=p1?p1.value||'':'',date=p2?p2.value||new Date().toISOString().split('T')[0]:'',label=p3?p3.value||'Sony Data':'Sony Data';if(!text.trim()){window.showGDriveToast('Paste data first');return;}window.sonyData.push({id:Date.now(),date:date,label:label,text:text.trim()});localStorage.setItem('wm_sony_data',JSON.stringify(window.sonyData));if(p1)p1.value='';if(p3)p3.value='';var panel=document.getElementById('sony-panel');if(panel)panel.style.display='none';window.refreshSonyHighlights();window.showGDriveToast('Sony data saved');};
+window._delSony=function(i){window.sonyData.splice(i,1);localStorage.setItem('wm_sony_data',JSON.stringify(window.sonyData));window.refreshSonyHighlights();};
+window.refreshSonyHighlights=function(){var el=document.getElementById('sony-highlights');if(!el)return;if(!window.sonyData.length){el.innerHTML='<div style="font-size:9px;color:#4a3868;padding:8px 0">No data yet</div>';return;}el.innerHTML=window.sonyData.slice().reverse().map(function(e,ri){var i=window.sonyData.length-1-ri;return '<div style="background:#0a0820;border-radius:9px;padding:11px;margin-top:8px;border-left:3px solid #a07fd455"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:10px;font-weight:700;font-family:Syne,sans-serif;color:#a07fd4">'+e.label+'</div><div style="display:flex;gap:9px;align-items:center"><span style="font-size:9px;color:#4a3868">'+e.date+'</span><button onclick="window._delSony('+i+')" style="background:none;border:none;color:#f09a9a;cursor:pointer;font-size:15px;padding:0">&#215;</button></div></div><div style="font-size:9px;color:#9090a8;font-family:DM Mono,monospace;white-space:pre-wrap;max-height:80px;overflow-y:auto;padding:6px;background:#080618;border-radius:5px;line-height:1.8">'+e.text.substring(0,400)+'</div></div>';}).join('');};
+function _injSonyPanel(){if(document.getElementById('sony-highlights'))return;var pg=document.querySelector('.pg');if(!pg)return;var d=document.createElement('div');d.innerHTML='<div class="card" style="margin-bottom:12px;border:1px solid #a07fd433"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px"><div><div class="cl" style="margin-bottom:3px;color:#a07fd4">&#128202; Sony DSRP Data</div><div style="font-size:9px;color:#4a3868">Upload screenshots or paste data — feeds Campaign Report + Hey Jessi</div></div><div style="display:flex;gap:7px"><a href="https://sme-artistportal.com" target="_blank" class="btno bsm" style="text-decoration:none;font-size:9px">&#127925; Sony Portal &#8599;</a><button onclick="toggleSonyPanel()" class="btn bsm" style="font-size:9px">+ Add Data</button></div></div><div id="sony-panel" style="display:none;margin-top:10px"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"><input type="date" id="sony-date" style="background:var(--bg3);border:1px solid var(--bdr);border-radius:7px;padding:6px 10px;font-size:9px;color:var(--tx);font-family:DM Mono,monospace"><input class="inp" id="sony-label" placeholder="Label (e.g. Con Cora Week 1)" style="flex:1;min-width:150px;font-size:9px"></div><textarea class="inp" id="sony-paste" placeholder="Paste Sony DSRP numbers — any format" style="width:100%;min-height:80px;font-size:9px;resize:vertical;margin-bottom:9px;line-height:1.8"></textarea><div style="display:flex;gap:7px"><button onclick="saveSonyEntry()" class="btn bsm">&#128190; Save</button></div></div><div id="sony-highlights" style="margin-top:9px"></div></div>';pg.insertAdjacentElement('afterbegin',d.firstChild);var sd=document.getElementById('sony-date');if(sd)sd.value=new Date().toISOString().split('T')[0];window.refreshSonyHighlights();}
+window.crDataEntries=JSON.parse(localStorage.getItem('wm_cr_data')||'[]');
+window._saveCRData=function(){localStorage.setItem('wm_cr_data',JSON.stringify(window.crDataEntries));};
+window.addCRDataEntry=function(){var ta=document.getElementById('cr-data-paste'),ti=document.getElementById('cr-data-title');var text=ta?ta.value.trim():'',title=ti?ti.value.trim()||'Data Entry':'Data Entry';if(!text){window.showGDriveToast('Paste data first');return;}window.crDataEntries.push({id:Date.now(),title:title,text:text,date:new Date().toLocaleString()});window._saveCRData();if(ta)ta.value='';if(ti)ti.value='';window.refreshCRCards();window.showGDriveToast('Section added');};
+window._delCREntry=function(i){window.crDataEntries.splice(i,1);window._saveCRData();window.refreshCRCards();};
+window.refreshCRCards=function(){var el=document.getElementById('cr-data-cards');if(!el)return;if(!window.crDataEntries.length){el.innerHTML='<div style="font-size:9px;color:#4a3868;padding:6px 0">No data added yet</div>';return;}el.innerHTML=window.crDataEntries.slice().reverse().map(function(e,ri){var i=window.crDataEntries.length-1-ri;return '<div style="background:#0a0820;border-radius:9px;padding:11px;margin-top:8px;border-left:3px solid #a07fd455"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div style="font-size:10px;font-weight:700;color:#a07fd4;font-family:Syne,sans-serif">'+e.title+'</div><div style="display:flex;gap:8px;align-items:center"><span style="font-size:9px;color:#4a3868">'+e.date+'</span><button onclick="(function(){var inp=document.getElementById('ai-inp');if(inp)inp.value='Analyze this: '+e.title.replace(/'/g,'').replace(/"/g,'').substring(0,50)+'\\n\\n'+e.text.substring(0,200).replace(/'/g,'').replace(/"/g,'')+'';if(typeof go==='function')go('ai');setTimeout(function(){if(typeof aiSend==='function')aiSend();},300);})()" class="btno bsm" style="font-size:8px">&#10022; Jessi</button><button onclick="window._delCREntry('+i+')" style="background:none;border:none;color:#f09a9a;cursor:pointer;font-size:15px;padding:0">&#215;</button></div></div><div style="font-size:9px;color:#9090a8;font-family:DM Mono,monospace;white-space:pre-wrap;max-height:80px;overflow-y:auto;padding:6px;background:#080618;border-radius:5px;line-height:1.8">'+e.text.substring(0,400)+'</div></div>';}).join('');};
+window.jessiImages=window.jessiImages||[];
+var _rC=[],_rMR=null,_rA=false;
+window.toggleJessiRecord=function(){var btn=document.getElementById('record-btn');if(!_rA){navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){_rMR=new MediaRecorder(stream);_rC=[];_rMR.ondataavailable=function(e){_rC.push(e.data);};_rMR.onstop=function(){var blob=new Blob(_rC,{type:'audio/webm'});var url=URL.createObjectURL(blob);var att=document.getElementById('jessi-attachments');if(att){att.style.display='flex';var d=document.createElement('div');d.style.cssText='padding:6px;background:var(--bg3);border-radius:7px;border:1px solid var(--bdr)';d.innerHTML='<audio controls src="'+url+'" style="height:30px;border-radius:5px"></audio>';att.appendChild(d);}var inp=document.getElementById('ai-inp');if(inp&&!inp.value)inp.value='[Voice note]';stream.getTracks().forEach(function(t){t.stop();});window.showGDriveToast('Voice note ready');};_rMR.start();_rA=true;if(btn){btn.innerHTML='&#9209; Stop';btn.style.color='#f09a9a';}}).catch(function(){window.showGDriveToast('Microphone access needed');});}else{if(_rMR)_rMR.stop();_rA=false;if(btn){btn.innerHTML='&#128308; Record';btn.style.color='';}}};
+window.handleJessiImage=function(input){var att=document.getElementById('jessi-attachments');if(att)att.style.display='flex';Array.from(input.files||[]).forEach(function(file){var r=new FileReader();r.onload=function(e){window.jessiImages.push({type:file.type||'image/jpeg',data:e.target.result.split(',')[1],name:file.name});if(att){var d=document.createElement('div');d.innerHTML='<img src="'+e.target.result+'" style="height:60px;border-radius:6px;border:1px solid var(--bdr);object-fit:cover">';att.appendChild(d);}window.showGDriveToast('Screenshot added');};r.readAsDataURL(file);});input.value='';};
+if(typeof renderPage==='function'){var _origRP=renderPage;window.renderPage=function(){_origRP.apply(this,arguments);setTimeout(function(){if(typeof CUR!=='undefined'){if(CUR==='dsp')_injSonyPanel();if(CUR==='campaignreport'){window.refreshCRCards&&window.refreshCRCards();}}
+_injectThemeBtn();_injectHdrToggle();var old3=document.querySelector('.sb-toggle');if(old3)old3.style.display='none';},200);};}
+document.addEventListener('DOMContentLoaded',function(){_applyTheme(_theme);setTimeout(function(){_injectThemeBtn();_injectHdrToggle();if(typeof CUR!=='undefined'&&CUR==='dsp')_injSonyPanel();window.refreshSonyHighlights&&window.refreshSonyHighlights();window.refreshCRCards&&window.refreshCRCards();var old4=document.querySelector('.sb-toggle');if(old4)old4.style.display='none';},700);});
+window.toggleTheme=function(){_applyTheme(_theme==='dark'?'light':'dark');};
+})();
+</script>
+<script>
+
+// ── OVERRIDE buildDriveBar with working direct onclick version ──
+window._origBuildDriveBar = window.buildDriveBar;
+function buildDriveBar(pageId){
+  function dBtn(lbl,fn){return '<button onclick="'+fn+'" class="drive-btn-direct" style="padding:5px 10px;border-radius:6px;font-size:9px;font-weight:700;font-family:Syne,sans-serif;cursor:pointer;border:1px solid #4285F433;background:none;color:#4285F4;letter-spacing:.06em;text-transform:uppercase">&#128196; '+lbl+'</button>';}
+  function sBtn(lbl,fn){return '<button onclick="'+fn+'" class="drive-btn-direct" style="padding:5px 10px;border-radius:6px;font-size:9px;font-weight:700;font-family:Syne,sans-serif;cursor:pointer;border:1px solid #0F9D5833;background:none;color:#0F9D58;letter-spacing:.06em;text-transform:uppercase">&#128202; '+lbl+'</button>';}
+  var map={
+    overview:  dBtn('Save Overview','exportPageToDrive(&quot;overview&quot;)')+sBtn('Stats Sheet','exportPageToDrive(&quot;overview&quot;,&quot;sheet&quot;)'),
+    platforms: dBtn('Platforms Doc','exportPageToDrive(&quot;platforms&quot;)')+sBtn('Platforms Sheet','exportPageToDrive(&quot;platforms&quot;,&quot;sheet&quot;)'),
+    dsp:       dBtn('DSP Report','exportPageToDrive(&quot;dsp&quot;)')+sBtn('DSP Sheet','exportPageToDrive(&quot;dsp&quot;,&quot;sheet&quot;)'),
+    catalogue: sBtn('Catalogue Sheet','exportPageToDrive(&quot;catalogue&quot;,&quot;sheet&quot;)')+dBtn('Catalogue Doc','exportPageToDrive(&quot;catalogue&quot;)'),
+    chartex:   dBtn('ChartEx Session','exportPageToDrive(&quot;chartex&quot;)'),
+    campaignreport: dBtn('Campaign Report Doc','exportPageToDrive(&quot;campaignreport&quot;)')+sBtn('Report Sheet','exportPageToDrive(&quot;campaignreport&quot;,&quot;sheet&quot;)'),
+    viral:     dBtn('Viral Formulas','exportPageToDrive(&quot;viral&quot;)'),
+    listening: dBtn('Listening Report','exportPageToDrive(&quot;listening&quot;)'),
+    ai:        dBtn('Jessi Chat Doc','exportJessiToDrive(&quot;doc&quot;)')+sBtn('Chat to Sheet','exportJessiToDrive(&quot;sheet&quot;)'),
+    campaigns: dBtn('Campaigns Doc','exportAllCampaignsToDrive(&quot;doc&quot;)')+sBtn('Campaigns Sheet','exportAllCampaignsToDrive()'),
+    crm:       sBtn('CRM Sheet','exportCRMToDrive()')+dBtn('CRM Report Doc','exportCRMReportToDrive()'),
+    budget:    sBtn('Budget Sheet','exportBudgetToDrive()')+dBtn('Budget Report','exportPageToDrive(&quot;budget&quot;)'),
+    calendar:  dBtn('Calendar Doc','exportPageToDrive(&quot;calendar&quot;)')+sBtn('Events Sheet','exportCalendarToDrive()'),
+    drafts:    dBtn('All Drafts Doc','exportAllDraftsToDrive()'),
+    contracts: sBtn('Contracts Sheet','exportContractsToDrive()')+dBtn('Contracts Doc','exportPageToDrive(&quot;contracts&quot;)'),
+    partners:  dBtn('Partners Doc','exportPageToDrive(&quot;partners&quot;)')+sBtn('Airtable Sheet','exportAirtableToDrive(&quot;Creators&quot;)'),
+  };
+  var b=map[pageId]||dBtn('Save This Page','exportPageToDrive(&quot;'+pageId+'&quot;)');
+  var fullBtn='<button onclick="exportPageToDrive(&quot;all&quot;)" style="padding:5px 10px;border-radius:6px;font-size:9px;font-weight:700;font-family:Syne,sans-serif;cursor:pointer;border:1px solid #2a1f42;background:none;color:#4a3868;margin-left:auto;letter-spacing:.06em;text-transform:uppercase">&#128193; Full Export</button>';
+  return '<div class="drive-bar">'+
+    '<span style="font-size:9px;color:#9080b0;font-family:Syne,sans-serif;font-weight:700;letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">&#128190; Google Drive</span>'+
+    b+fullBtn+'</div>';
+}
+
+// Override sidebar collapse CSS
+var sidebarStyle = document.getElementById('wm-sidebar-collapse-fix');
+if(!sidebarStyle){
+  sidebarStyle = document.createElement('style');
+  sidebarStyle.id = 'wm-sidebar-collapse-fix';
+  document.head.appendChild(sidebarStyle);
+}
+sidebarStyle.textContent = `
+.sidebar.collapsed { width:36px!important; overflow:hidden!important; }
+.sidebar.collapsed .sg { display:none!important; }
+.sidebar.collapsed .si span:not(.ico) { display:none!important; }
+.sidebar.collapsed .si { padding:8px 0; justify-content:center; }
+.sidebar.collapsed .sb-bottom { display:none!important; }
+.sidebar.collapsed::after { 
+  content:'';
+  display:block;
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg, var(--purple-dim) 0%, transparent 100%);
+  pointer-events:none;
+}
+`;
+
+// Ensure nav toggle is in correct position
+function _ensureHdrToggle(){
+  var hdr = document.querySelector('.hdr');
+  if(!hdr) return;
+  var existing = document.getElementById('hdr-nav-toggle');
+  var logo = hdr.querySelector('.logo-l');
+  if(!logo) return;
+  if(!existing){
+    var tog = document.createElement('button');
+    tog.id = 'hdr-nav-toggle';
+    tog.className = 'hdr-toggle';
+    tog.innerHTML = '&#9776;';
+    tog.style.cssText = 'display:flex;align-items:center;justify-content:center;width:28px;height:28px;min-width:28px;background:none;border:1px solid var(--bdr);border-radius:6px;color:var(--tx2);cursor:pointer;font-size:13px;flex-shrink:0;margin-right:6px;transition:all .14s';
+    tog.onclick = function(){
+      var sb = document.getElementById('sidebar');
+      if(!sb) return;
+      var col = sb.classList.toggle('collapsed');
+      tog.innerHTML = col ? '&#9658;' : '&#9776;';
+      localStorage.setItem('wm_sb_col', col?'1':'0');
+    };
+    hdr.insertBefore(tog, logo);
+    if(localStorage.getItem('wm_sb_col')==='1'){
+      var sb=document.getElementById('sidebar');
+      if(sb)sb.classList.add('collapsed');
+      tog.innerHTML='&#9658;';
+    }
+  } else {
+    // Make sure it's before logo
+    if(hdr.children[0] !== existing) hdr.insertBefore(existing, logo);
+  }
+}
+
+function _injectThemeBtnUnderPartners(){
+  var sb = document.getElementById('sidebar');
+  if(!sb) return;
+  var existing = document.getElementById('wm-theme-btn-inline');
+  // Find Partners & APIs nav item
+  var sis = sb.querySelectorAll('.si');
+  var partnersEl = null;
+  sis.forEach(function(el){ if(el.innerText && el.innerText.indexOf('Partners')>=0) partnersEl=el; });
+  if(!partnersEl) return;
+  if(existing) { 
+    // Move it after partners
+    partnersEl.after(existing.parentNode || existing);
+    return; 
+  }
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'padding:6px 13px 3px;';
+  var btn = document.createElement('button');
+  btn.id = 'wm-theme-btn-inline';
+  btn.onclick = function(){ 
+    var t = localStorage.getItem('wm_theme')||'dark';
+    var newT = t==='dark'?'light':'dark';
+    if(newT==='light') document.documentElement.setAttribute('data-theme','light');
+    else document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('wm_theme', newT);
+    btn.innerHTML = newT==='dark'?'&#9728;&#xFE0F; Light Mode':'&#127769; Dark Mode';
+  };
+  var curTheme = localStorage.getItem('wm_theme')||'dark';
+  btn.innerHTML = curTheme==='dark'?'&#9728;&#xFE0F; Light Mode':'&#127769; Dark Mode';
+  btn.style.cssText = 'background:none;border:1px solid var(--bdr);border-radius:6px;color:var(--tx2);cursor:pointer;padding:5px 9px;font-size:9px;width:100%;display:flex;align-items:center;gap:7px;transition:all .14s;font-family:Syne,sans-serif;font-weight:700;letter-spacing:.06em;text-transform:uppercase';
+  wrap.appendChild(btn);
+  partnersEl.after(wrap);
+}
+
+// Add copy button to every .cl element
+function _addCopyBtns(){
+  document.querySelectorAll('.cl').forEach(function(el){
+    if(el.querySelector('.wm-copy-btn')) return;
+    var btn = document.createElement('button');
+    btn.className = 'wm-copy-btn';
+    btn.innerHTML = '&#128203;';
+    btn.style.cssText = 'background:none;border:none;cursor:pointer;color:var(--tx3);font-size:11px;padding:0 4px;margin-left:auto;opacity:.6;transition:opacity .14s;float:right';
+    btn.title = 'Copy section text';
+    btn.onclick = function(e){
+      e.stopPropagation();
+      var card = el.closest('.card,.kpi');
+      var text = card ? card.innerText : el.innerText;
+      navigator.clipboard&&navigator.clipboard.writeText(text).catch(function(){});
+      btn.innerHTML='&#10003;';btn.style.color='#a8f0c8';
+      setTimeout(function(){btn.innerHTML='&#128203;';btn.style.color='';},1500);
+    };
+    el.appendChild(btn);
+  });
+}
+
+window.openAirtable = function(table){
+  var url = table ? 'https://airtable.com/appmEo06Ys7B1OawE/'+table : 'https://airtable.com/appmEo06Ys7B1OawE';
+  window.open(url,'_blank');
+};
+
+// Apply all fixes on load and re-render
+function _applyAllFixes(){
+  _ensureHdrToggle();
+  _injectThemeBtnUnderPartners();
+  _addCopyBtns();
+  eval(sidebarStyle ? '' : sidebarCollapseFix);
+}
+if(typeof renderPage==='function'){
+  var _rp2 = window.renderPage;
+  window.renderPage = function(){
+    _rp2.apply(this,arguments);
+    setTimeout(_applyAllFixes, 250);
+  };
+}
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(_applyAllFixes, 800);
+});
+
+</script>
+
+<script>
+// ── ADDITIONAL EXPORT FUNCTIONS ──
+// Fix exportAirtableToDrive
+window.exportAirtableToDrive = window.exportAirtableToDrive || function(table){
+  window.showGDriveToast && window.showGDriveToast('Fetching '+table+' from Airtable...');
+  var AT_LIST = window.AT && window.AT.list;
+  if(AT_LIST){
+    AT_LIST(table).then(function(records){
+      if(!records.length){window.showGDriveToast('No records in '+table);return;}
+      var fields = Object.keys(records[0].fields||{});
+      var rows = [fields].concat(records.map(function(r){return fields.map(function(f){return String(r.fields[f]||'');});}));
+      window.saveToGoogleSheet && window.saveToGoogleSheet('Airtable — '+table, rows);
+    }).catch(function(e){window.showGDriveToast('Airtable error: '+e.message);});
+  } else {
+    window.showGDriveToast && window.showGDriveToast('Airtable not connected');
+  }
+};
+
+// Enhanced exportPageToDrive with DSP, platforms, overview, catalogue specifics
+var _origExport = window.exportPageToDrive;
+window.exportPageToDrive = function(pageId, mode){
+  var T = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  var el = document.getElementById('main');
+  var txt = el ? el.innerText.replace(/\n{3,}/g,'\n\n').trim() : '';
+  
+  if(pageId==='dsp'){
+    var t='DSP & Streaming — '+T;
+    if(mode==='sheet'||!mode){
+      var rows=[['Platform','Monthly Listeners','Change','URL'],
+        ['Spotify','36.6M','+8.3%','https://open.spotify.com/artist/3DiDSECUqqY1AuBP8qtaIa'],
+        ['Apple Music','~22M','+5.1%','https://music.apple.com/us/artist/alicia-keys/316069'],
+        ['YouTube Music','~7M','+12%','https://music.youtube.com/channel/UCF4-eKWB07vMKzsbxQq47ZA'],
+        ['Amazon Music','~14M','+4.2%',''],
+        ['Tidal','–','–',''],
+        ['Deezer','–','–',''],
+        [''],
+        ['Track','Est. Streams','Spotify ID'],
+        ['If I Ain't Got You','1.2B','1U1oh3G8CG4bbSjGQrJHmL'],
+        ["Fallin'",'980M','6PFQGBGpC8kMGNGzfhPIVj'],
+        ['No One','860M','3BsSZBClG4X0b1B6u4ADCT'],
+        ['Girl on Fire','620M','4esOae7i4rqTbAu9o5Pxco'],
+        ['Try Sleeping w/ Broken Heart','410M','5twlFMNQ2JEBs3rOTMIEfb'],
+        ['Plentiful ft. Pusha T','2.1M','6e3HTEX6m3I5tCP8gbnjEl'],
+      ];
+      if(window.sonyData&&window.sonyData.length){rows.push([''],['SONY DSRP DATA','Date','']);window.sonyData.forEach(function(e){rows.push([e.label,e.date,e.text.substring(0,300)]);});}
+      return window.saveToGoogleSheet(t,rows);
+    }
+    return window.saveToGoogleDoc(t,'=== DSP & STREAMING ===\nExported: '+new Date().toLocaleString()+'\n\nSpotify Monthly Listeners: 36.6M (+8.3%)\nApple Music: ~22M\nYouTube Music: ~7M\nAmazon Music: ~14M\nAll-Time Streams: 1.2B+\n\n'+txt.substring(0,3000)+(window.sonyData&&window.sonyData.length?'\n\nSONY DATA:\n'+window.sonyData.map(function(e){return'['+e.date+'] '+e.label;}).join('\n'):''));
+  }
+  if(pageId==='platforms'){
+    var t='Platforms — '+T;
+    if(mode==='sheet'||!mode){
+      return window.saveToGoogleSheet(t,[['Platform','Handle','Followers','Notes'],
+        ['Instagram','@aliciakeys','28M','0.61% eng · 165.8K avg likes'],
+        ['TikTok','@aliciakeys','8M','50.5M total likes'],
+        ['Spotify','Alicia Keys','36.6M monthly','1.2B+ streams'],
+        ['YouTube','@AliciaKeys','~7M','Verified'],
+        ['Facebook','Alicia Keys','~35M','Verified'],
+        ['X/Twitter','@aliciakeys','~28M','Verified'],
+      ]);
+    }
+    return window.saveToGoogleDoc(t,'=== PLATFORMS ===\nInstagram: 28M\nTikTok: 8M\nSpotify: 36.6M monthly\nYouTube: ~7M\nFacebook: ~35M\nX/Twitter: ~28M\n\n'+txt.substring(0,3000));
+  }
+  if(pageId==='overview'){
+    var t='Overview — '+T;
+    var camps='', jHist='';
+    if(typeof CAMPAIGNS_DATA!=='undefined')camps='\n\nCAMPAIGNS:\n'+CAMPAIGNS_DATA.map(function(c){return'• '+c.name+' | $'+c.budget+' budget | '+c.status;}).join('\n');
+    if(typeof aiHist!=='undefined'&&aiHist.length)jHist='\n\nLAST JESSI MESSAGES:\n'+aiHist.slice(-4).map(function(m){return(m.role==='user'?'YOU':'JESSI')+': '+m.content.substring(0,200);}).join('\n');
+    if(mode==='sheet'||!mode){
+      return window.saveToGoogleSheet(t,[['Metric','Value'],['Spotify Monthly Listeners','36.6M'],['Instagram','28M'],['TikTok','8M'],['Total Mentions Est.','~2.4M'],['Overview Date',new Date().toLocaleDateString()]]);
+    }
+    return window.saveToGoogleDoc(t,'=== OVERVIEW ===\nSpotify: 36.6M monthly listeners\nInstagram: 28M\nTikTok: 8M\n'+camps+jHist);
+  }
+  if(pageId==='catalogue'){
+    var t='Full Catalogue — '+T;
+    if(mode==='sheet'||!mode){
+      var rows=[['Song','Album','Year','Single','Trending','ChartEx','TikTok','Spotify']];
+      if(typeof ALBUMS!=='undefined')ALBUMS.forEach(function(al){al.songs.forEach(function(s){rows.push([s.s,al.t,al.y,s.x?'Yes':'',s.hot?'🔥':'',s.cx||'',s.tk||'',s.sp||'']);});});
+      return window.saveToGoogleSheet(t,rows);
+    }
+    return window.saveToGoogleDoc(t,'=== FULL CATALOGUE ===\n'+txt.substring(0,6000));
+  }
+  if(pageId==='chartex'){
+    return window.saveToGoogleDoc('ChartEx Session — '+T,'=== CHARTEX SESSION ===\nAK Artist Page: https://chartex.com/artist/alicia-keys-9779\n\n'+txt.substring(0,5000));
+  }
+  if(pageId==='listening'){
+    var t='Social Listening — '+T;
+    if(mode==='sheet'){
+      var rows=[['Source','Platform','Text','Sentiment','Time','Tags','URL']];
+      if(typeof FEED!=='undefined')FEED.forEach(function(f){rows.push([f.src,f.plat,f.txt,f.sent,f.time,(f.tags||[]).join(' '),f.url]);});
+      return window.saveToGoogleSheet(t,rows);
+    }
+    return window.saveToGoogleDoc(t,'=== SOCIAL LISTENING ===\n'+txt.substring(0,6000));
+  }
+  if(pageId==='viral'){
+    var t='Viral Formulas — '+T;
+    if(typeof viralDB!=='undefined'&&viralDB.length){
+      var rows=[['Platform','Handle','URL','Views','Likes','Sound','Description']].concat(viralDB.map(function(e){return[e.platform,e.handle,e.url,e.views,e.likes,e.song,e.desc];}));
+      return window.saveToGoogleSheet(t,rows);
+    }
+    return window.saveToGoogleDoc(t,'=== VIRAL FORMULAS ===\nNo formulas saved yet.');
+  }
+  if(pageId==='partners'){
+    return window.saveToGoogleDoc('Partners & APIs — '+T,'=== PARTNERS & APIs ===\nRender: ak-intelligence-backend.onrender.com\nGitHub: WIREHOUSE-MEDIA/ak-intelligence-backend\nAirtable: appmEo06Ys7B1OawE\nSpotify Artist: 3DiDSECUqqY1AuBP8qtaIa\nChartEx: chartex.com/artist/alicia-keys-9779\nGoogle Calendar: jesskim@wirehousemedia.com\n\n'+txt.substring(0,3000));
+  }
+  if(pageId==='all'){
+    var allData='=== AK INTELLIGENCE FULL EXPORT ===\n'+new Date().toLocaleString()+'\n\n';
+    if(typeof CAMPAIGNS_DATA!=='undefined')allData+='CAMPAIGNS:\n'+CAMPAIGNS_DATA.map(function(c){return c.name+' | $'+c.budget+' | $'+c.spent+' spent | '+c.status;}).join('\n')+'\n\n';
+    if(typeof crmData!=='undefined')allData+='CREATORS:\n'+crmData.map(function(c){return c.n+' '+c.h+' '+c.plat+' '+c.fol+' '+c.fee+' '+c.st;}).join('\n')+'\n\n';
+    if(typeof budgetData!=='undefined')allData+='BUDGET: $'+budgetData.total+' total | $'+budgetData.lines.reduce(function(a,b){return a+b.spent;},0)+' spent\n\n';
+    if(typeof aiHist!=='undefined'&&aiHist.length)allData+='JESSI CHAT (last 10):\n'+aiHist.slice(-10).map(function(m){return(m.role==='user'?'YOU':'JESSI')+': '+m.content.substring(0,300);}).join('\n---\n');
+    return window.saveToGoogleDoc('AK Full Export — '+T, allData);
+  }
+  // Default: use the old function if it exists, otherwise grab page text
+  if(_origExport) return _origExport(pageId, mode);
+  if(mode==='sheet') return window.saveToGoogleSheet(pageId+' — '+T,[['Content'],[txt.substring(0,4000)]]);
+  return window.saveToGoogleDoc(pageId+' — '+T,'=== '+pageId.toUpperCase()+' ===\n'+txt.substring(0,7000));
+};
+</script>
+<style>
+/* Airtable button style */
+.at-btn{padding:4px 9px;border-radius:5px;font-size:8px;font-weight:700;font-family:'Syne',sans-serif;border:1px solid #fcb400aa;background:none;color:#fcb400;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:all .14s}
+.at-btn:hover{background:#fcb40018;border-color:#fcb400}
+/* Drive button fix */
+.drive-btn-direct{transition:all .14s}
+.drive-btn-direct:hover{opacity:.8}
+</style>
+<script>
+(function(){
+
+// ═══ 1. OVERRIDE pgCatalogue — fix album ChartEx links ═══
+var ALBUM_CX = {
+  'Songs in A Minor':'https://chartex.com/album/songs-in-a-minor-5245',
+  'The Diary of Alicia Keys':'https://chartex.com/album/the-diary-of-alicia-keys-5243',
+  'As I Am':'https://chartex.com/album/as-i-am-expanded-edition-5239',
+  'The Element of Freedom':'https://chartex.com/album/the-element-of-freedom-5238',
+  'Girl on Fire':'https://chartex.com/song/alicia-keys-girl-on-fire-67833',
+  'Here':'https://chartex.com/artist/alicia-keys-9779',
+  'ALICIA':'https://chartex.com/album/alicia-5234',
+  'KEYS / KEYS II':'https://chartex.com/artist/alicia-keys-9779',
+  '2022-2025 Singles & Collabs':'https://chartex.com/artist/alicia-keys-9779'
+};
+
+// ═══ 2. AIRTABLE BUTTONS ═══
+var AT_BASE = 'https://airtable.com/appmEo06Ys7B1OawE';
+window.openAT = function(tbl){ window.open(AT_BASE+(tbl?'/'+tbl:''),'_blank'); };
+
+function atBtn(label, tbl){
+  return '<a href="'+AT_BASE+(tbl?'/'+tbl:'')+'" target="_blank" class="at-btn" style="text-decoration:none">⊞ '+label+'</a>';
+}
+
+// ═══ 3. INJECT AIRTABLE + COPY BUTTONS INTO RENDERED PAGES ═══
+function _injectSectionEnhancements(){
+  // Add Airtable buttons to specific sections
+  var main = document.getElementById('main');
+  if(!main) return;
+  
+  var pageId = (typeof CUR !== 'undefined') ? CUR : '';
+  
+  // Already injected?
+  if(main.querySelector('.wm-at-injected')) return;
+  var marker = document.createElement('span');
+  marker.className = 'wm-at-injected';
+  marker.style.display = 'none';
+  main.appendChild(marker);
+  
+  // Add copy btn to every card label
+  main.querySelectorAll('.cl').forEach(function(el){
+    if(el.querySelector('.wm-copy-btn')) return;
+    var btn = document.createElement('button');
+    btn.className = 'wm-copy-btn';
+    btn.innerHTML = '&#128203;';
+    btn.title = 'Copy section';
+    btn.style.cssText = 'background:none;border:none;cursor:pointer;color:var(--tx3);font-size:10px;padding:0 3px;margin-left:auto;float:right;opacity:.5';
+    btn.onclick = function(e){
+      e.stopPropagation();
+      var card = btn.closest('.card,.kpi,.ai-a') || el.parentElement;
+      var text = card ? card.innerText.replace(/\u{1F4CB}/g,'').trim() : el.innerText;
+      if(navigator.clipboard) navigator.clipboard.writeText(text).catch(function(){});
+      btn.innerHTML='&#10003;';btn.style.color='#a8f0c8';
+      setTimeout(function(){btn.innerHTML='&#128203;';btn.style.color='';},1500);
+    };
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.appendChild(btn);
+  });
+  
+  // Airtable buttons for specific pages
+  if(pageId==='campaigns'||pageId==='crm'||pageId==='budget'){
+    var cards = main.querySelectorAll('.card');
+    cards.forEach(function(card){
+      var cl = card.querySelector('.cl');
+      if(!cl || cl.querySelector('.at-btn')) return;
+      var tbl = pageId==='crm' ? 'Creators' : pageId==='budget' ? 'Budget' : 'Campaigns';
+      var a = document.createElement('a');
+      a.href = AT_BASE;
+      a.target = '_blank';
+      a.className = 'at-btn';
+      a.style.cssText = 'text-decoration:none;padding:3px 8px;border-radius:5px;font-size:8px;font-weight:700;font-family:Syne,sans-serif;border:1px solid #fcb400aa;background:none;color:#fcb400;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-left:8px';
+      a.innerHTML = '&#8941; Airtable';
+      cl.appendChild(a);
+    });
+  }
+  
+  // Fix album ChartEx links in catalogue
+  if(pageId==='catalogue'){
+    main.querySelectorAll('.card').forEach(function(card){
+      var heading = card.querySelector('[style*="color:var(--gold)"]');
+      if(!heading) return;
+      var albumName = heading.innerText.trim();
+      var cxUrl = ALBUM_CX[albumName];
+      if(!cxUrl) return;
+      var links = card.querySelectorAll('a[href*="chartex.com/artist/"]');
+      links.forEach(function(a){ a.href = cxUrl; });
+    });
+  }
+}
+
+// ═══ 4. CAMPAIGN REPORT EDITABLE SECTIONS ═══
+window.crSections = JSON.parse(localStorage.getItem('wm_cr_sections')||'[]');
+window.saveCRSections = function(){ localStorage.setItem('wm_cr_sections', JSON.stringify(window.crSections)); };
+
+window.addCRDataEntry = function(){
+  var ta=document.getElementById('cr-data-paste'),ti=document.getElementById('cr-data-title');
+  if(!ta||!ti) return;
+  var text=ta.value.trim(), title=ti.value.trim()||'Data Section';
+  if(!text){ window.showGDriveToast&&window.showGDriveToast('Paste data first'); return; }
+  window.crSections.push({id:'cr'+Date.now(),title:title,text:text,date:new Date().toLocaleString(),editable:true});
+  window.saveCRSections();
+  ta.value='';ti.value='';
+  window.renderCRSections&&window.renderCRSections();
+  window.showGDriveToast&&window.showGDriveToast('Section added — click ✦ to analyze with Jessi');
+};
+
+window.deleteCRSection = function(id){
+  window.crSections = window.crSections.filter(function(s){return s.id!==id;});
+  window.saveCRSections();
+  window.renderCRSections&&window.renderCRSections();
+};
+
+window.editCRSection = function(id, field, val){
+  var s = window.crSections.find(function(x){return x.id===id;});
+  if(s){ s[field]=val; window.saveCRSections(); }
+};
+
+window.renderCRSections = function(){
+  var el = document.getElementById('cr-data-cards');
+  if(!el) return;
+  if(!window.crSections.length){
+    el.innerHTML='<div style="font-size:9px;color:#4a3868;padding:8px 0">No sections yet — paste data above and click Add Section</div>';
+    return;
+  }
+  el.innerHTML = window.crSections.map(function(s){
+    return '<div id="crs-'+s.id+'" style="background:#0a0820;border-radius:9px;padding:12px;margin-top:9px;border-left:3px solid #a07fd455;position:relative">'+
+      '<div style="display:flex;align-items:center;gap:7px;margin-bottom:7px">'+
+        '<input value="'+s.title.replace(/"/g,'&quot;')+'" onchange="window.editCRSection(''+s.id+'','title',this.value)" '+
+          'style="background:none;border:none;border-bottom:1px solid #a07fd433;color:#a07fd4;font-size:11px;font-weight:700;font-family:Syne,sans-serif;flex:1;outline:none;padding:2px 0">'+
+        '<span style="font-size:9px;color:#4a3868">'+s.date+'</span>'+
+        '<button onclick="(function(){var inp=document.getElementById('ai-inp');if(inp){inp.value='Analyze this data and give key insights, trends, and recommendations:\\n\\n'+s.title.replace(/'/g,'').replace(/\n/g,' ').substring(0,50)+'\\n\\n'+s.text.substring(0,300).replace(/'/g,'').replace(/\n/g,' ')+'';if(typeof go==='function')go('ai');setTimeout(function(){typeof aiSend==='function'&&aiSend();},300);}}).call()" '+
+          'class="btno bsm" style="font-size:8px">✦ Jessi</button>'+
+        '<button onclick="window.deleteCRSection(''+s.id+'')" style="background:none;border:none;color:#f09a9a;cursor:pointer;font-size:16px;padding:0;line-height:1">×</button>'+
+      '</div>'+
+      '<textarea onchange="window.editCRSection(''+s.id+'','text',this.value)" '+
+        'style="width:100%;min-height:60px;background:#080618;border:1px solid #1a1030;border-radius:5px;padding:7px;font-size:9px;color:#9090a8;font-family:DM Mono,monospace;resize:vertical;line-height:1.8;box-sizing:border-box">'+
+        s.text.substring(0,600).replace(/</g,'&lt;').replace(/>/g,'&gt;')+
+      '</textarea>'+
+    '</div>';
+  }).join('');
+};
+
+// ═══ 5. CAMPAIGN REPORT ADD DATA PANEL with Google Drive import ═══
+window._toggleCRPanel = function(){
+  var p=document.getElementById('cr-add-panel');
+  if(p) p.style.display = p.style.display==='none'?'block':'none';
+};
+
+window.importFromGDrive = function(){
+  var url = prompt('Paste your Google Doc or Sheet URL:');
+  if(!url||!url.startsWith('http')) return;
+  var title = 'Google Drive Import';
+  if(url.includes('docs.google.com/document')) title='Google Doc';
+  else if(url.includes('docs.google.com/spreadsheets')) title='Google Sheet';
+  window.crSections.push({
+    id:'cr'+Date.now(),
+    title:title+' — '+new Date().toLocaleDateString(),
+    text:'Imported from Google Drive.
+URL: '+url+'
+
+Click to open ↗ '+url,
+    date:new Date().toLocaleString(),
+    editable:true
+  });
+  window.saveCRSections();
+  window.renderCRSections&&window.renderCRSections();
+  window.showGDriveToast&&window.showGDriveToast('Drive link added as section — click ✦ Jessi to analyze');
+};
+
+// ═══ 6. OVERRIDE renderPage to inject enhancements ═══
+if(typeof renderPage==='function'){
+  var _rp3 = window.renderPage;
+  window.renderPage = function(){
+    _rp3.apply(this,arguments);
+    setTimeout(function(){
+      _injectSectionEnhancements();
+      window.renderCRSections&&window.renderCRSections();
+      // Load saved sony data highlights
+      window.refreshSonyHighlights&&window.refreshSonyHighlights();
+    }, 350);
+  };
+}
+
+// ═══ 7. AIRTABLE export functions ═══
+window.exportAirtableToDrive = function(table){
+  if(!table){window.showGDriveToast&&window.showGDriveToast('Specify table name');return;}
+  window.showGDriveToast&&window.showGDriveToast('Exporting '+table+' from Airtable...');
+  if(typeof AT!=='undefined'&&AT.list){
+    AT.list(table).then(function(records){
+      if(!records||!records.length){window.showGDriveToast&&window.showGDriveToast('No records in '+table);return;}
+      var fields=Object.keys((records[0]&&records[0].fields)||{});
+      var rows=[fields].concat(records.map(function(r){return fields.map(function(f){return String((r.fields&&r.fields[f])||'');});}));
+      window.saveToGoogleSheet&&window.saveToGoogleSheet('Airtable '+table,rows);
+    }).catch(function(e){window.showGDriveToast&&window.showGDriveToast('Airtable error: '+e.message);});
+  } else {
+    window.showGDriveToast&&window.showGDriveToast('Airtable not connected yet');
+  }
+};
+
+// Init on load
+document.addEventListener('DOMContentLoaded',function(){
+  setTimeout(function(){
+    _injectSectionEnhancements();
+    window.renderCRSections&&window.renderCRSections();
+    window.refreshSonyHighlights&&window.refreshSonyHighlights();
+    // Load saved CR sections
+    window.crSections = JSON.parse(localStorage.getItem('wm_cr_sections')||'[]');
+  }, 800);
+});
+
+})();
+</script>
+<!-- ═══════════════════════════════════════
+  AK INTELLIGENCE — TARGETED PATCH
+  Adds to index__5_.html without changing anything:
+  1. Sony DSRP panel at top of DSP page → generates editable sections
+  2. Campaign Report data input → generates moveable editable sections
+  3. Fixes buildDriveBar buttons (data-fn eval breaks on quotes)
+  4. 7-day localStorage persistence
+  5. Screenshot upload → Jessi analyzes → auto editable section
+  6. All sections: editable title/text, drag to reorder, delete
+═══════════════════════════════════════ -->
+<style>
+/* ── EDITABLE DASHBOARD SECTIONS ── */
+.ak-sec{background:var(--bg3,#0a0820);border:1px solid var(--bdr,#1c1c35);border-radius:10px;padding:13px 14px;margin-top:9px;border-left:3px solid #a07fd455;position:relative;transition:box-shadow .14s}
+.ak-sec.drag-over{box-shadow:0 -2px 0 0 #a07fd4,0 0 0 1px #a07fd422}
+.ak-sec-hdr{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.ak-drag{color:#3a2858;font-size:12px;cursor:grab;flex-shrink:0;padding:0 2px;line-height:1}
+.ak-drag:hover{color:#a07fd4}
+.ak-sec[draggable="true"]{cursor:default}
+.ak-stitle{background:none;border:none;border-bottom:1px solid #a07fd422;color:#a07fd4;font-size:11px;font-weight:700;font-family:'Syne',sans-serif;flex:1;outline:none;padding:2px 0;min-width:0;transition:border-color .12s}
+.ak-stitle:focus{border-bottom-color:#a07fd4}
+.ak-sdate{font-size:8px;color:#3a2858;font-family:'DM Mono',monospace;flex-shrink:0;white-space:nowrap}
+.ak-sbody{width:100%;min-height:52px;background:var(--bg2,#080618);border:1px solid var(--bdr,#1c1c35);border-radius:6px;padding:8px 10px;font-size:9px;color:#9090a8;font-family:'DM Mono',monospace;resize:vertical;line-height:1.8;box-sizing:border-box;outline:none;transition:border-color .12s;margin-bottom:7px}
+.ak-sbody:focus{border-color:#a07fd444;color:#c0b8d8}
+.ak-sactions{display:flex;gap:5px;flex-wrap:wrap}
+.ak-sbtn{background:none;border:1px solid #1e1436;border-radius:5px;color:#6a58a0;font-size:8px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;padding:4px 9px;transition:all .12s;letter-spacing:.04em;text-transform:uppercase}
+.ak-sbtn:hover{border-color:#a07fd4;color:#a07fd4}
+.ak-sdel{position:absolute;right:9px;top:9px;background:none;border:none;color:#3a2858;cursor:pointer;font-size:17px;padding:0;line-height:1;transition:color .12s}
+.ak-sdel:hover{color:#f09a9a}
+.ak-sec-empty{font-size:9px;color:#2a2040;font-family:'Syne',sans-serif;text-align:center;padding:16px 0;line-height:2}
+/* ── SONY PANEL ── */
+.ak-sony{background:linear-gradient(135deg,#0e0824,#14082e);border:1px solid #2a1f4a;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.ak-sony-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.ak-sony-ttl{font-family:'Syne',sans-serif;font-weight:800;font-size:11px;color:#c0a8e8;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:7px}
+.ak-sony-sub{font-size:9px;color:#3a2858;font-family:'Syne',sans-serif;margin-bottom:8px;line-height:1.55}
+.ak-sony-form{background:#060414;border:1px solid #1a1030;border-radius:8px;padding:12px;margin:8px 0;display:none}
+.ak-sony-form.open{display:block}
+.ak-sony-row{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.ak-sinp{background:#0a0820;border:1px solid #1e1438;border-radius:6px;color:#d0c8e8;font-size:10px;padding:7px 10px;font-family:'Syne',sans-serif;outline:none;flex:1;min-width:120px}
+.ak-sinp:focus{border-color:#a07fd455}
+.ak-sta{background:#0a0820;border:1px solid #1e1438;border-radius:6px;color:#d0c8e8;font-size:10px;padding:8px 10px;font-family:'DM Mono',monospace;width:100%;min-height:75px;resize:vertical;outline:none;line-height:1.8;box-sizing:border-box}
+.ak-sta:focus{border-color:#a07fd455}
+.ak-srow2{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap}
+.ak-ssave{flex:1;min-width:100px;background:linear-gradient(135deg,#7c5cbf,#a07fd4);border:none;border-radius:6px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:10px;cursor:pointer;padding:8px;display:flex;align-items:center;justify-content:center;gap:5px;letter-spacing:.04em}
+.ak-sjessi{flex:1;min-width:120px;background:none;border:1px solid #a07fd455;border-radius:6px;color:#a07fd4;font-family:'Syne',sans-serif;font-weight:700;font-size:10px;cursor:pointer;padding:8px;display:flex;align-items:center;justify-content:center;gap:5px;letter-spacing:.04em}
+.ak-sentry{background:#0a0820;border-left:3px solid #a07fd455;border-radius:7px;padding:9px 12px;margin-top:7px;position:relative}
+.ak-sentry-lbl{font-size:10px;color:#c0a8e8;font-family:'Syne',sans-serif;font-weight:700;margin-bottom:2px}
+.ak-sentry-date{font-size:8px;color:#3a2858;font-family:'DM Mono',monospace;margin-bottom:4px}
+.ak-sentry-txt{font-size:9px;color:#7070a0;font-family:'DM Mono',monospace;line-height:1.7;white-space:pre-wrap;max-height:80px;overflow:hidden}
+.ak-sentry-del{position:absolute;right:7px;top:7px;background:none;border:none;color:#3a2858;cursor:pointer;font-size:14px;transition:color .12s}
+.ak-sentry-del:hover{color:#f09a9a}
+.ak-empty-sony{font-size:9px;color:#2a2040;font-family:'Syne',sans-serif;text-align:center;padding:12px 0;line-height:1.9}
+</style>
+
+<script>
+(function(){
+'use strict';
+
+// ═══════════════════════════════════════
+// 1. 7-DAY PERSISTENCE — stamp + prune
+// ═══════════════════════════════════════
+var D7 = 7 * 24 * 60 * 60 * 1000;
+function stamp(e){ if(!e.ts) e.ts = Date.now(); return e; }
+function fresh(e){ return !e.ts || Date.now()-e.ts < D7; }
+function pruneArr(arr, key){
+  var f = arr.filter(fresh);
+  if(f.length !== arr.length){
+    arr.splice(0,arr.length); f.forEach(function(x){arr.push(x);});
+    try{ localStorage.setItem(key, JSON.stringify(arr)); }catch(e){}
+  }
+}
+
+// ── Sony data (re-load + prune) ──
+window.sonyData = JSON.parse(localStorage.getItem('wm_sony_data')||'[]').map(stamp);
+pruneArr(window.sonyData, 'wm_sony_data');
+window._sonyImgs = [];
+
+// ── CR sections ──
+window.crSections = JSON.parse(localStorage.getItem('wm_cr_secs')||'[]').map(stamp);
+pruneArr(window.crSections, 'wm_cr_secs');
+
+// ── DSP sections ──
+window.dspSections = JSON.parse(localStorage.getItem('wm_dsp_secs')||'[]').map(stamp);
+pruneArr(window.dspSections, 'wm_dsp_secs');
+
+function saveSONY(){ try{localStorage.setItem('wm_sony_data', JSON.stringify(window.sonyData));}catch(e){} }
+function saveCR(){   try{localStorage.setItem('wm_cr_secs',   JSON.stringify(window.crSections));}catch(e){} }
+function saveDSP(){  try{localStorage.setItem('wm_dsp_secs',  JSON.stringify(window.dspSections));}catch(e){} }
+
+// ═══════════════════════════════════════
+// 2. FIX buildDriveBar — onclick instead of data-fn+eval (quotes survive HTML parser)
+// ═══════════════════════════════════════
+window.buildDriveBar = function(pageId){
+  function dBtn(lbl,fn){
+    return '<button onclick="'+fn+'" style="padding:5px 10px;border-radius:6px;font-size:9px;font-weight:700;font-family:Syne,sans-serif;cursor:pointer;border:1px solid #4285F433;background:none;color:#4285F4;letter-spacing:.06em;text-transform:uppercase">&#128196; '+lbl+'</button>';
+  }
+  function sBtn(lbl,fn){
+    return '<button onclick="'+fn+'" style="padding:5px 10px;border-radius:6px;font-size:9px;font-weight:700;font-family:Syne,sans-serif;cursor:pointer;border:1px solid #0F9D5833;background:none;color:#0F9D58;letter-spacing:.06em;text-transform:uppercase">&#128202; '+lbl+'</button>';
+  }
+  var btns={
+    overview:   dBtn('Save Overview',  "exportPageToDrive(&quot;overview&quot;)")        +sBtn('Stats Sheet',      "exportPageToDrive(&quot;overview&quot;,&quot;sheet&quot;)"),
+    platforms:  dBtn('Platforms Doc',  "exportPageToDrive(&quot;platforms&quot;)")       +sBtn('Platforms Sheet',  "exportPageToDrive(&quot;platforms&quot;,&quot;sheet&quot;)"),
+    dsp:        dBtn('DSP Report',     "exportPageToDrive(&quot;dsp&quot;)")             +sBtn('DSP Sheet',        "exportPageToDrive(&quot;dsp&quot;,&quot;sheet&quot;)"),
+    catalogue:  sBtn('Catalogue Sheet',"exportPageToDrive(&quot;catalogue&quot;,&quot;sheet&quot;)") +dBtn('Catalogue Doc',"exportPageToDrive(&quot;catalogue&quot;)"),
+    chartex:    dBtn('ChartEx Session',"exportPageToDrive(&quot;chartex&quot;)"),
+    campaignreport: dBtn('Campaign Report Doc',"exportPageToDrive(&quot;campaignreport&quot;)") +sBtn('Report Sheet',"exportPageToDrive(&quot;campaignreport&quot;,&quot;sheet&quot;)"),
+    viral:      dBtn('Viral Formulas', "exportPageToDrive(&quot;viral&quot;)"),
+    listening:  dBtn('Listening Report',"exportPageToDrive(&quot;listening&quot;)"),
+    ai:         dBtn('Jessi Chat Doc', "exportJessiToDrive(&quot;doc&quot;)")             +sBtn('Chat to Sheet',   "exportJessiToDrive(&quot;sheet&quot;)"),
+    campaigns:  dBtn('Campaigns Doc',  "exportAllCampaignsToDrive(&quot;doc&quot;)")     +sBtn('Campaigns Sheet', "exportAllCampaignsToDrive()"),
+    crm:        sBtn('CRM Sheet',      "exportCRMToDrive()")                              +dBtn('CRM Report Doc',  "exportCRMReportToDrive()"),
+    budget:     sBtn('Budget Sheet',   "exportBudgetToDrive()")                           +dBtn('Budget Report',   "exportPageToDrive(&quot;budget&quot;)"),
+    calendar:   dBtn('Calendar Doc',   "exportPageToDrive(&quot;calendar&quot;)")         +sBtn('Events Sheet',    "exportCalendarToDrive()"),
+    drafts:     dBtn('All Drafts Doc', "exportAllDraftsToDrive()"),
+    contracts:  sBtn('Contracts Sheet',"exportContractsToDrive()")                        +dBtn('Contracts Doc',   "exportPageToDrive(&quot;contracts&quot;)"),
+    partners:   dBtn('Partners Doc',   "exportPageToDrive(&quot;partners&quot;)")         +sBtn('Airtable Sheet',  "exportAirtableToDrive(&quot;Creators&quot;)"),
+  };
+  var b = btns[pageId] || dBtn('Save This Page', "exportPageToDrive(&quot;"+pageId+"&quot;)");
+  var full = '<button onclick="exportPageToDrive(&quot;all&quot;)" style="padding:5px 10px;border-radius:6px;font-size:9px;font-weight:700;font-family:Syne,sans-serif;cursor:pointer;border:1px solid #2a1f42;background:none;color:#4a3868;margin-left:auto;letter-spacing:.06em;text-transform:uppercase">&#128193; Full Export</button>';
+  return '<div class="drive-bar"><span style="font-size:9px;color:#9080b0;font-family:Syne,sans-serif;font-weight:700;letter-spacing:.1em;text-transform:uppercase;flex-shrink:0">&#128190; Google Drive</span>'+b+full+'</div>';
+};
+
+// ═══════════════════════════════════════
+// 3. DRAG-AND-DROP HELPER
+// ═══════════════════════════════════════
+function makeDrag(container, arr, saveF, renderF){
+  var cards = container.querySelectorAll('.ak-sec');
+  var src = null;
+  cards.forEach(function(el){
+    el.setAttribute('draggable','true');
+    el.ondragstart = function(e){ src=el; el.style.opacity='.45'; e.dataTransfer.effectAllowed='move'; };
+    el.ondragend   = function(){ el.style.opacity=''; src=null; };
+    el.ondragover  = function(e){ e.preventDefault(); el.classList.add('drag-over'); };
+    el.ondragleave = function(){ el.classList.remove('drag-over'); };
+    el.ondrop      = function(e){
+      e.preventDefault(); el.classList.remove('drag-over');
+      if(!src||src===el)return;
+      var from=parseInt(src.dataset.ri), to=parseInt(el.dataset.ri);
+      var len=arr.length;
+      // ri is reversed index: ri=0 = arr[len-1]
+      var rFrom=len-1-from, rTo=len-1-to;
+      var item=arr.splice(rFrom,1)[0]; arr.splice(rTo,0,item);
+      saveF(); renderF();
+    };
+  });
+}
+
+// ═══════════════════════════════════════
+// 4. SECTION RENDERER — editable, draggable
+// ═══════════════════════════════════════
+function renderSecArr(containerId, arr, saveF, renderF, extraBtns){
+  var el = document.getElementById(containerId); if(!el) return;
+  if(!arr.length){
+    el.innerHTML = '<div class="ak-sec-empty">No sections yet — paste data above and click Add Section</div>';
+    return;
+  }
+  el.innerHTML = arr.slice().reverse().map(function(e,ri){
+    var i = arr.length-1-ri;
+    var tEsc = (e.title||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    var bEsc = (e.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    var arrName = arr === window.crSections ? 'crSections' : 'dspSections';
+    var saveCall = arr === window.crSections ? 'saveCR_()' : 'saveDSP_()';
+    var renderCall = arr === window.crSections ? 'renderCRSecs()' : 'renderDSPSecs()';
+    var extra = extraBtns ? extraBtns(e, i, arrName) : '';
+    return '<div class="ak-sec" draggable="true" data-ri="'+ri+'" data-id="'+e.id+'">'+
+      '<button class="ak-sdel" onclick="akDelSec(\''+arrName+'\','+i+')">×</button>'+
+      '<div class="ak-sec-hdr">'+
+        '<span class="ak-drag" title="Drag to reorder">⠿</span>'+
+        '<input class="ak-stitle" value="'+tEsc+'" placeholder="Section title"'+
+          ' onchange="window.'+arrName+'['+i+'].title=this.value;window.'+saveCall+'">'+
+        '<span class="ak-sdate">'+e.date+'</span>'+
+      '</div>'+
+      '<textarea class="ak-sbody"'+
+        ' onchange="window.'+arrName+'['+i+'].text=this.value;window.'+saveCall+'">'+bEsc+'</textarea>'+
+      '<div class="ak-sactions">'+
+        '<button class="ak-sbtn" onclick="akJessiSec(\''+arrName+'\','+i+')">✦ Jessi</button>'+
+        '<button class="ak-sbtn" onclick="akCopySec(\''+arrName+'\','+i+',this)">📋 Copy</button>'+
+        extra+
+      '</div>'+
+    '</div>';
+  }).join('');
+  makeDrag(el, arr, saveF, renderF);
+}
+
+// Expose save functions to string-eval context
+window.saveCR_  = function(){ saveCR(); };
+window.saveDSP_ = function(){ saveDSP(); };
+
+window.akDelSec = function(arrName, i){
+  var arr = arrName==='crSections' ? window.crSections : window.dspSections;
+  arr.splice(i,1);
+  if(arrName==='crSections'){ saveCR(); window.renderCRSecs(); }
+  else { saveDSP(); window.renderDSPSecs(); }
+};
+
+window.akCopySec = function(arrName, i, btn){
+  var arr = arrName==='crSections' ? window.crSections : window.dspSections;
+  var e = arr[i]; if(!e) return;
+  var txt = e.title+'\n\n'+e.text;
+  if(navigator.clipboard) navigator.clipboard.writeText(txt).catch(function(){});
+  if(btn){ btn.textContent='✓ Copied'; setTimeout(function(){ btn.textContent='📋 Copy'; }, 1500); }
+};
+
+window.akJessiSec = function(arrName, i){
+  var arr = arrName==='crSections' ? window.crSections : window.dspSections;
+  var e = arr[i]; if(!e) return;
+  if(typeof go==='function') go('ai');
+  setTimeout(function(){
+    var inp = document.getElementById('ai-inp');
+    if(inp) inp.value = 'Analyze this data and give me key insights, trends, and recommended next actions:\n\nTitle: '+e.title+'\n\n'+e.text;
+    if(typeof aiSend==='function') setTimeout(aiSend, 100);
+  }, 300);
+};
+
+// ═══════════════════════════════════════
+// 5. CAMPAIGN REPORT SECTIONS
+// ═══════════════════════════════════════
+window.renderCRSecs = function(){
+  renderSecArr('ak-cr-secs', window.crSections, saveCR, window.renderCRSecs,
+    function(e, i){ return '<button class="ak-sbtn" onclick="akSendSecToDrive(\'crSections\','+i+')" style="color:#4285F4;border-color:#4285F422">📄 To Doc</button>'; }
+  );
+};
+
+window.akAddCRSec = function(){
+  var ta = document.getElementById('cr-data-paste');
+  var ti = document.getElementById('ak-cr-title');
+  var text = ta ? ta.value.trim() : '';
+  var title = ti ? ti.value.trim() : '';
+  if(!text){ if(typeof showGDriveToast==='function') showGDriveToast('Paste data first — then click Add Section'); return; }
+  window.crSections.push({ id:Date.now(), ts:Date.now(), title:title||'Data — '+new Date().toLocaleDateString(), text:text, date:new Date().toLocaleString() });
+  saveCR();
+  if(ta) ta.value=''; if(ti) ti.value='';
+  var panel = document.getElementById('cr-upload-panel'); if(panel) panel.style.display='none';
+  window.renderCRSecs();
+  if(typeof showGDriveToast==='function') showGDriveToast('✓ Section added — drag ⠿ to reorder, click title/text to edit');
+};
+
+window.akAddCRAndJessi = function(){
+  var ta = document.getElementById('cr-data-paste');
+  var ti = document.getElementById('ak-cr-title');
+  var text = ta ? ta.value.trim() : '';
+  var title = ti ? ti.value.trim() : '';
+  if(!text && (!window.crUploads || !window.crUploads.some(function(u){return u.dataUrl;}))){ 
+    if(typeof showGDriveToast==='function') showGDriveToast('Paste data or upload a screenshot first'); return; 
+  }
+  if(text){
+    window.crSections.push({ id:Date.now(), ts:Date.now(), title:title||'Jessi Analysis — '+new Date().toLocaleDateString(), text:text, date:new Date().toLocaleString() });
+    saveCR(); window.renderCRSecs();
+  }
+  if(typeof window.sendDashToJessi==='function') window.sendDashToJessi();
+  if(typeof showGDriveToast==='function') showGDriveToast('Sending to Jessi — section saved');
+};
+
+window.akSendSecToDrive = function(arrName, i){
+  var arr = arrName==='crSections' ? window.crSections : window.dspSections;
+  var e = arr[i]; if(!e) return;
+  if(typeof window.saveToGoogleDoc==='function')
+    window.saveToGoogleDoc(e.title+' — '+new Date().toLocaleDateString(), '=== '+e.title+' ===\n'+e.date+'\n\n'+e.text);
+};
+
+window.akImportDriveURL = function(){
+  var url = prompt('Paste your Google Doc or Sheet URL:');
+  if(!url||!url.startsWith('http')) return;
+  var type = url.includes('spreadsheets') ? 'Google Sheet' : 'Google Doc';
+  window.crSections.push({ id:Date.now(), ts:Date.now(), title:type+' — '+new Date().toLocaleDateString(), text:'Source: '+url+'\n\nOpen: '+url, date:new Date().toLocaleString() });
+  saveCR(); window.renderCRSecs();
+  if(typeof showGDriveToast==='function') showGDriveToast('Drive link saved — click ✦ Jessi to analyze');
+};
+
+// Inject title input + Add/Jessi buttons into cr-upload-panel
+function _upgradeCRPanel(){
+  var panel = document.getElementById('cr-upload-panel'); if(!panel) return;
+  if(panel.querySelector('.ak-cr-injected')) return;
+  panel.classList.add('ak-cr-injected');
+
+  // Add title input before textarea
+  var ta = document.getElementById('cr-data-paste');
+  if(ta){
+    var inp = document.createElement('input');
+    inp.id = 'ak-cr-title';
+    inp.className = 'inp';
+    inp.placeholder = 'Section title (e.g. Sony DSRP Apr 5, Con Cora Week 2 Stats)';
+    inp.style.cssText = 'width:100%;margin-bottom:7px;font-size:9px';
+    ta.parentNode.insertBefore(inp, ta);
+  }
+
+  // Add buttons row after textarea
+  var preview = document.getElementById('cr-uploads-preview');
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:7px;margin-top:8px;flex-wrap:wrap';
+  btnRow.innerHTML =
+    '<button onclick="window.akAddCRSec()" class="btn bsm" style="font-size:9px">➕ Add Section</button>'+
+    '<button onclick="window.akAddCRAndJessi()" class="btno bsm" style="font-size:9px">✦ Add + Analyze with Jessi</button>'+
+    '<button onclick="window.akImportDriveURL()" class="btno bsm" style="font-size:9px">📁 Import Drive URL</button>';
+  if(preview) preview.parentNode.insertBefore(btnRow, preview.nextSibling);
+  else panel.appendChild(btnRow);
+
+  // Sections container
+  var campContent = document.getElementById('camp-report-content');
+  var secWrap = document.createElement('div');
+  secWrap.id = 'ak-cr-secs-wrap';
+  secWrap.innerHTML = '<div class="cl" style="color:var(--purple);margin-top:14px;margin-bottom:3px">📎 Data Sections</div><div id="ak-cr-secs"></div>';
+  if(campContent) campContent.before(secWrap);
+  else panel.after(secWrap);
+
+  window.renderCRSecs();
+}
+
+// ═══════════════════════════════════════
+// 6. SONY DSP PANEL + DSP SECTIONS
+// ═══════════════════════════════════════
+window.renderDSPSecs = function(){
+  renderSecArr('ak-dsp-secs', window.dspSections, saveDSP, window.renderDSPSecs,
+    function(e, i){ return '<button class="ak-sbtn" onclick="akSendDSPToCR('+i+')" style="color:#a07fd4;border-color:#a07fd422">→ Campaign Report</button>'; }
+  );
+};
+
+window.akSendDSPToCR = function(i){
+  var e = window.dspSections[i]; if(!e) return;
+  window.crSections.push({ id:Date.now(), ts:Date.now(), title:'DSP: '+e.title, text:e.text, date:new Date().toLocaleString() });
+  saveCR();
+  if(document.getElementById('ak-cr-secs')) window.renderCRSecs();
+  if(typeof showGDriveToast==='function') showGDriveToast('Sent to Campaign Report ✓');
+};
+
+window.akSaveSonyEntry = function(){
+  var p = document.getElementById('ak-sony-paste');
+  var l = document.getElementById('ak-sony-label');
+  var d = document.getElementById('ak-sony-date');
+  var text  = p ? p.value.trim() : '';
+  var label = l ? l.value.trim() : '';
+  var date  = d ? d.value || new Date().toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+  if(!text && !window._sonyImgs.length){ if(typeof showGDriveToast==='function') showGDriveToast('Paste data or upload a screenshot first'); return; }
+  var entry = { id:Date.now(), ts:Date.now(), label:label||'Sony Data '+date, text:text, date:date, imgs:window._sonyImgs.slice() };
+  window.sonyData.push(entry);
+  saveSONY();
+  window._sonyImgs = [];
+  if(p) p.value=''; if(l) l.value='';
+  var prev = document.getElementById('ak-sony-prev'); if(prev) prev.innerHTML='';
+  var form = document.getElementById('ak-sony-form'); if(form) form.classList.remove('open');
+  // Auto-generate DSP section + CR section
+  var sec = { id:Date.now(), ts:Date.now(), title:entry.label+' — '+entry.date, text:entry.text||(entry.imgs.length?'['+entry.imgs.length+' screenshot(s) uploaded — see Jessi analysis]':''), date:new Date().toLocaleString() };
+  window.dspSections.push(sec); saveDSP();
+  window.crSections.push({ id:Date.now()+1, ts:Date.now(), title:'Sony DSRP: '+entry.label, text:sec.text, date:new Date().toLocaleString() });
+  saveCR();
+  window.akRenderSonyHL();
+  window.renderDSPSecs();
+  if(document.getElementById('ak-cr-secs')) window.renderCRSecs();
+  if(typeof showGDriveToast==='function') showGDriveToast('📊 Saved → DSP section created + Campaign Report updated');
+};
+
+window.akSonyToJessi = function(){
+  var p = document.getElementById('ak-sony-paste');
+  var l = document.getElementById('ak-sony-label');
+  var d = document.getElementById('ak-sony-date');
+  var text  = p ? p.value.trim() : '';
+  var label = l ? l.value.trim() : 'Sony data';
+  var date  = d ? d.value : new Date().toISOString().split('T')[0];
+  if(window._sonyImgs.length && typeof jessiImages!=='undefined')
+    window.jessiImages = window._sonyImgs.map(function(dt,i){ return {type:'image/jpeg', data:dt, name:'sony-'+i+'.jpg'}; });
+  if(typeof go==='function') go('ai');
+  setTimeout(function(){
+    var inp = document.getElementById('ai-inp');
+    if(inp) inp.value = 'Analyze this Sony DSRP/Luminate data ('+label+', '+date+'):\n\n'+(text||'[See screenshot attached]')+'\n\nGive me: platform-by-platform highlights, week-over-week changes, what is working, what needs attention, and next action steps.';
+    if(typeof aiSend==='function') setTimeout(aiSend, 100);
+  }, 300);
+};
+
+window.akAddSonyScreenshot = function(input){
+  Array.from(input.files||[]).forEach(function(file){
+    var r = new FileReader(); r.onload = function(e){
+      window._sonyImgs.push(e.target.result);
+      var prev = document.getElementById('ak-sony-prev');
+      if(prev){
+        var d = document.createElement('div');
+        d.innerHTML = '<img src="'+e.target.result+'" style="height:60px;border-radius:6px;border:1px solid #2a1f42;object-fit:cover;cursor:pointer" onclick="window.open(this.src)">';
+        prev.appendChild(d);
+      }
+      if(typeof showGDriveToast==='function') showGDriveToast('📷 Screenshot ready — click Save Entry or ✦ Analyze with Jessi');
+    };
+    r.readAsDataURL(file);
+  });
+  input.value='';
+};
+
+window.akRenderSonyHL = function(){
+  var el = document.getElementById('ak-sony-entries'); if(!el) return;
+  if(!window.sonyData.length){
+    el.innerHTML = '<div class="ak-empty-sony">No data yet — paste Sony DSRP numbers or upload a screenshot above.<br>Each entry auto-creates a dashboard section + feeds Campaign Report + Jessi.</div>';
+    return;
+  }
+  el.innerHTML = window.sonyData.slice().reverse().map(function(e,ri){
+    var i = window.sonyData.length-1-ri;
+    var h = '<div class="ak-sentry">';
+    h += '<div class="ak-sentry-date">'+e.date+'</div>';
+    h += '<div class="ak-sentry-lbl">'+e.label+'</div>';
+    if(e.imgs&&e.imgs.length){
+      h += '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px">';
+      e.imgs.forEach(function(img){ h += '<img src="'+img+'" style="height:50px;border-radius:5px;object-fit:cover;cursor:pointer;border:1px solid #2a1f42" onclick="window.open(this.src)">'; });
+      h += '</div>';
+    }
+    if(e.text) h += '<div class="ak-sentry-txt">'+e.text.substring(0,300)+(e.text.length>300?'…':'')+'</div>';
+    h += '<div style="display:flex;gap:5px;margin-top:6px">';
+    h += '<button onclick="window.akGenDSPSec('+i+')" class="ak-sbtn" style="font-size:8px">+ DSP Section</button>';
+    h += '<button onclick="(function(){window.jessiImages=(window.sonyData['+i+'].imgs||[]).map(function(d,k){return{type:\'image/jpeg\',data:d,name:\'sony-\'+k+\'.jpg\'};});if(typeof go===\'function\')go(\'ai\');setTimeout(function(){var inp=document.getElementById(\'ai-inp\');if(inp)inp.value=\'Analyze this Sony data and generate highlighted data points as a dashboard section:\\n\\n\'+window.sonyData['+i+'].label+\'\\n\'+window.sonyData['+i+'].text;if(typeof aiSend===\'function\')setTimeout(aiSend,100);},300);})()" class="ak-sbtn" style="font-size:8px">✦ Jessi Section</button>';
+    h += '<button onclick="window.akDelSony('+i+')" class="ak-sentry-del">×</button>';
+    h += '</div></div>';
+    return h;
+  }).join('');
+};
+
+window.akGenDSPSec = function(i){
+  var e = window.sonyData[i]; if(!e) return;
+  var sec = { id:Date.now(), ts:Date.now(), title:e.label+' — '+e.date, text:e.text||(e.imgs.length?'['+e.imgs.length+' screenshot(s) — use ✦ Jessi to analyze]':''), date:new Date().toLocaleString() };
+  window.dspSections.push(sec); saveDSP(); window.renderDSPSecs();
+  window.crSections.push({ id:Date.now()+1, ts:Date.now(), title:'Sony: '+e.label, text:sec.text, date:new Date().toLocaleString() });
+  saveCR();
+  if(document.getElementById('ak-cr-secs')) window.renderCRSecs();
+  if(typeof showGDriveToast==='function') showGDriveToast('DSP section created ✓');
+};
+
+window.akDelSony = function(i){
+  window.sonyData.splice(i,1); saveSONY(); window.akRenderSonyHL();
+};
+
+function buildSonyPanelHTML(){
+  return '<div class="ak-sony">'+
+    '<div class="ak-sony-hdr">'+
+      '<div class="ak-sony-ttl">📊 Sony DSRP / Luminate Data</div>'+
+      '<div style="display:flex;gap:7px;align-items:center">'+
+        '<a href="https://sme-artistportal.com" target="_blank" class="btno bsm" style="text-decoration:none;font-size:8px;padding:3px 8px;white-space:nowrap">🎵 Sony Portal ↗</a>'+
+        '<button onclick="document.getElementById(\'ak-sony-form\').classList.toggle(\'open\')" class="btn bsm" style="font-size:9px">+ Add Data</button>'+
+      '</div>'+
+    '</div>'+
+    '<div class="ak-sony-sub">Upload screenshots or paste data — date-labeled, auto-creates DSP sections + feeds Campaign Report + Hey Jessi</div>'+
+    '<div class="ak-sony-form" id="ak-sony-form">'+
+      '<div class="ak-sony-row">'+
+        '<input class="ak-sinp" id="ak-sony-label" placeholder="Label (e.g. Con Cora Week 1, Monthly DSRP Apr 5)">'+
+        '<input type="date" id="ak-sony-date" class="ak-sinp" style="max-width:140px">'+
+      '</div>'+
+      '<textarea class="ak-sta" id="ak-sony-paste" placeholder="Paste Sony DSRP numbers, Luminate export, streaming data — any format. Jessi reads it all."></textarea>'+
+      '<div id="ak-sony-prev" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:7px"></div>'+
+      '<div class="ak-srow2">'+
+        '<button onclick="window.akSaveSonyEntry()" class="ak-ssave">💾 Save Entry</button>'+
+        '<button onclick="window.akSonyToJessi()" class="ak-sjessi">✦ Analyze with Jessi</button>'+
+        '<label class="btno bsm" style="cursor:pointer;font-size:9px;display:inline-flex;align-items:center;gap:5px">'+
+          '📷 Upload Screenshots<input type="file" accept="image/*" multiple style="display:none" onchange="window.akAddSonyScreenshot(this)">'+
+        '</label>'+
+      '</div>'+
+    '</div>'+
+    '<div id="ak-sony-entries" style="margin-top:8px"></div>'+
+    '<div style="margin-top:11px;text-align:center">'+
+      '<a href="https://sme-artistportal.com" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#7c5cbf,#a07fd4);border:none;border-radius:8px;color:#fff;font-family:Syne,sans-serif;font-weight:700;font-size:10px;cursor:pointer;padding:8px 18px;text-decoration:none;letter-spacing:.04em">🎵 Open Sony Artist Portal ↗</a>'+
+    '</div>'+
+  '</div>';
+}
+
+function buildDSPSecsHTML(){
+  return '<div class="card" style="margin-bottom:11px;border:1px dashed #a07fd433">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">'+
+    '<div class="cl" style="color:var(--purple);margin-bottom:0">⊞ DSP Data Sections</div>'+
+    '<button onclick="window.akManualDSPSec()" class="btno bsm" style="font-size:8px">+ Add Manually</button>'+
+    '</div>'+
+    '<div id="ak-dsp-secs"></div>'+
+  '</div>';
+}
+
+window.akManualDSPSec = function(){
+  var title = prompt('Section title:'); if(!title) return;
+  var text = prompt('Paste data (or press OK to add empty section):') || '';
+  window.dspSections.push({ id:Date.now(), ts:Date.now(), title:title, text:text, date:new Date().toLocaleString() });
+  saveDSP(); window.renderDSPSecs();
+};
+
+// ═══════════════════════════════════════
+// 7. PAGE INJECTION ON RENDER
+// ═══════════════════════════════════════
+function _injDSP(){
+  var pg = document.querySelector('#main .pg, #main'); if(!pg) return;
+  if(pg.querySelector('.ak-sony')) return; // already injected
+  var sonyWrap = document.createElement('div');
+  sonyWrap.innerHTML = buildSonyPanelHTML()+buildDSPSecsHTML();
+  pg.insertAdjacentElement('afterbegin', sonyWrap);
+  // Set today's date
+  var dateInp = document.getElementById('ak-sony-date');
+  if(dateInp) dateInp.value = new Date().toISOString().split('T')[0];
+  window.akRenderSonyHL();
+  window.renderDSPSecs();
+}
+
+function _injCR(){
+  if(document.querySelector('.ak-cr-injected')) return;
+  _upgradeCRPanel();
+  if(typeof window.switchCampaignReport==='function') window.switchCampaignReport('all');
+}
+
+// Hook into renderPage
+if(typeof renderPage==='function'){
+  var _rp0 = window.renderPage;
+  window.renderPage = function(){
+    _rp0.apply(this, arguments);
+    setTimeout(function(){
+      var cur = typeof CUR!=='undefined' ? CUR : '';
+      if(cur==='dsp') _injDSP();
+      if(cur==='campaignreport') _injCR();
+    }, 220);
+  };
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(function(){
+    var cur = typeof CUR!=='undefined' ? CUR : '';
+    if(cur==='dsp') _injDSP();
+    if(cur==='campaignreport') _injCR();
+    // If campaign report is the default page, also trigger
+    if(document.getElementById('camp-report-content')) _injCR();
+  }, 800);
+});
+
+console.log('[AK PATCH] Drive buttons fixed · Sony panel · CR sections · 7-day persistence · drag+drop ready');
+})();
+</script>
+
+
+<!-- ═══ FINAL FIX: Fixed drive bar + working buttons on first load ═══ -->
+<style>
+/* Fixed drive bar at bottom — never scrolls */
+#wm-fixed-bar{
+  position:fixed;bottom:0;right:0;z-index:500;
+  transition:left .15s ease;
+  background:var(--bg2);
+  border-top:1px solid var(--bdr);
+  backdrop-filter:blur(10px);
+}
+#wm-fixed-bar .drive-bar{
+  border-radius:0!important;margin:0!important;
+  border:none!important;background:transparent!important;
+  position:static!important;
+}
+/* Padding so content doesn't hide behind fixed bar */
+.main{padding-bottom:70px!important}
+/* Hide the inline drive bar (we use fixed one now) */
+.pg > .drive-bar{display:none!important}
+.drive-bar:not(#wm-fixed-bar .drive-bar){display:none!important}
+</style>
+
+<script>
+(function(){
+// ══ Create the fixed bar element ══
+function _getOrCreateBar(){
+  var el = document.getElementById('wm-fixed-bar');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'wm-fixed-bar';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+// ══ Update sidebar left offset ══
+function _getBarLeft(){
+  var sb = document.getElementById('sidebar');
+  return (sb && sb.classList.contains('collapsed')) ? 36 : 166;
+}
+
+// ══ Render the fixed bar with the WORKING buildDriveBar ══
+function _renderFixedBar(){
+  var el = _getOrCreateBar();
+  el.style.left = _getBarLeft() + 'px';
+  if(typeof buildDriveBar === 'function' && typeof CUR !== 'undefined'){
+    el.innerHTML = buildDriveBar(CUR);
+  }
+}
+
+// ══ Hook into every renderPage call ══
+if(typeof renderPage === 'function'){
+  var _rpFix = window.renderPage;
+  window.renderPage = function(){
+    _rpFix.apply(this, arguments);
+    setTimeout(_renderFixedBar, 60);
+  };
+}
+
+// ══ Update left when sidebar is toggled ══
+var _origToggle = window.toggleSidebar;
+window.toggleSidebar = function(){
+  if(_origToggle) _origToggle.apply(this, arguments);
+  setTimeout(function(){
+    var el = document.getElementById('wm-fixed-bar');
+    if(el) el.style.left = _getBarLeft() + 'px';
+  }, 160);
+};
+// Also watch hdr toggle buttons
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('#sb-toggle,#wm-tog,[onclick*="toggleSidebar"],[onclick*="collapsed"]');
+  if(btn) setTimeout(function(){
+    var el = document.getElementById('wm-fixed-bar');
+    if(el) el.style.left = _getBarLeft() + 'px';
+  }, 200);
+});
+
+// ══ Initial render ══
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(_renderFixedBar, 300);
+});
+setTimeout(_renderFixedBar, 400);
+})();
+</script>
 </body>
 </html>

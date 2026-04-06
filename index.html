@@ -4318,88 +4318,92 @@ console.log('[AK PATCH] Drive buttons fixed · Sony panel · CR sections · 7-da
 </script>
 
 
-<!-- ═══ FINAL FIX: Fixed drive bar + working buttons on first load ═══ -->
+<!-- ═══ PATCH: Drive bar at bottom only + iPhone nav ═══ -->
 <style>
-/* Fixed drive bar at bottom — never scrolls */
-#wm-fixed-bar{
-  position:fixed;bottom:0;right:0;z-index:500;
-  transition:left .15s ease;
-  background:var(--bg2);
-  border-top:1px solid var(--bdr);
-  backdrop-filter:blur(10px);
-}
-#wm-fixed-bar .drive-bar{
-  border-radius:0!important;margin:0!important;
-  border:none!important;background:transparent!important;
+/* Drive bar: just sits at page bottom, only see it when scrolled there */
+#wm-fixed-bar{display:none!important}
+.main{padding-bottom:20px!important}
+.pg>.drive-bar{display:flex!important}
+.drive-bar:not(#wm-fixed-bar .drive-bar){display:flex!important}
+.drive-bar{
   position:static!important;
+  bottom:auto!important;
+  margin-top:18px;
+  border-radius:9px!important;
 }
-/* Padding so content doesn't hide behind fixed bar */
-.main{padding-bottom:70px!important}
-/* Hide the inline drive bar (we use fixed one now) */
-.pg > .drive-bar{display:none!important}
-.drive-bar:not(#wm-fixed-bar .drive-bar){display:none!important}
-</style>
 
+/* Mobile header: show tabs, shrink logo */
+@media(max-width:600px){
+  .hdr{padding:0 6px!important}
+  .logo-nm{display:none!important}
+  .logo-ak{font-size:10px!important}
+  .htab{padding:3px 6px!important;font-size:8px!important}
+  .hdr-r{display:none!important}
+}
+
+/* Mobile sidebar: mob-open overrides collapsed */
+@media(max-width:600px){
+  .sidebar{width:0!important;overflow:hidden!important;position:fixed!important;height:100vh!important;top:0!important;left:0!important;z-index:200!important}
+  .sidebar.mob-open{width:166px!important;overflow-y:auto!important}
+  .sidebar.mob-open *{display:revert!important}
+  .sidebar.mob-open .sg{display:block!important}
+  .sidebar.mob-open .si{display:flex!important}
+  .sidebar.mob-open .sb-bottom{display:block!important}
+}
+</style>
 <script>
 (function(){
-// ══ Create the fixed bar element ══
-function _getOrCreateBar(){
-  var el = document.getElementById('wm-fixed-bar');
-  if(!el){
-    el = document.createElement('div');
-    el.id = 'wm-fixed-bar';
-    document.body.appendChild(el);
+window.toggleSidebar=function(){
+  var sb=document.getElementById('sidebar');
+  var btn=document.getElementById('sb-toggle');
+  var tog=document.getElementById('hdr-nav-toggle');
+  if(!sb)return;
+  if(window.innerWidth<=600){
+    sb.classList.remove('collapsed');
+    var open=sb.classList.contains('mob-open');
+    if(open){
+      sb.classList.remove('mob-open');
+      if(btn)btn.textContent='☰';
+      if(tog)tog.innerHTML='&#9776;';
+    }else{
+      sb.classList.add('mob-open');
+      if(btn)btn.textContent='✕';
+      if(tog)tog.innerHTML='✕';
+      function close(e){
+        var t=e.target||e.srcElement;
+        if(!sb.contains(t)&&t!==btn&&t!==tog){
+          sb.classList.remove('mob-open');
+          if(btn)btn.textContent='☰';
+          if(tog)tog.innerHTML='&#9776;';
+          document.removeEventListener('touchstart',close);
+          document.removeEventListener('click',close);
+        }
+      }
+      setTimeout(function(){
+        document.addEventListener('touchstart',close,{passive:true});
+        document.addEventListener('click',close,{passive:true});
+      },100);
+    }
+  }else{
+    var col=sb.classList.toggle('collapsed');
+    if(tog)tog.innerHTML=col?'&#9658;':'&#9776;';
+    if(btn)btn.textContent=col?'▶':'◀';
+    localStorage.setItem('wm_sb_col',col?'1':'0');
   }
-  return el;
-}
-
-// ══ Update sidebar left offset ══
-function _getBarLeft(){
-  var sb = document.getElementById('sidebar');
-  return (sb && sb.classList.contains('collapsed')) ? 36 : 166;
-}
-
-// ══ Render the fixed bar with the WORKING buildDriveBar ══
-function _renderFixedBar(){
-  var el = _getOrCreateBar();
-  el.style.left = _getBarLeft() + 'px';
-  if(typeof buildDriveBar === 'function' && typeof CUR !== 'undefined'){
-    el.innerHTML = buildDriveBar(CUR);
-  }
-}
-
-// ══ Hook into every renderPage call ══
-if(typeof renderPage === 'function'){
-  var _rpFix = window.renderPage;
-  window.renderPage = function(){
-    _rpFix.apply(this, arguments);
-    setTimeout(_renderFixedBar, 60);
-  };
-}
-
-// ══ Update left when sidebar is toggled ══
-var _origToggle = window.toggleSidebar;
-window.toggleSidebar = function(){
-  if(_origToggle) _origToggle.apply(this, arguments);
-  setTimeout(function(){
-    var el = document.getElementById('wm-fixed-bar');
-    if(el) el.style.left = _getBarLeft() + 'px';
-  }, 160);
 };
-// Also watch hdr toggle buttons
-document.addEventListener('click', function(e){
-  var btn = e.target.closest('#sb-toggle,#wm-tog,[onclick*="toggleSidebar"],[onclick*="collapsed"]');
-  if(btn) setTimeout(function(){
-    var el = document.getElementById('wm-fixed-bar');
-    if(el) el.style.left = _getBarLeft() + 'px';
-  }, 200);
-});
-
-// ══ Initial render ══
-document.addEventListener('DOMContentLoaded', function(){
-  setTimeout(_renderFixedBar, 300);
-});
-setTimeout(_renderFixedBar, 400);
+function bind(){
+  ['sb-toggle','hdr-nav-toggle'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el&&!el.dataset.b){
+      el.dataset.b='1';
+      el.addEventListener('touchend',function(e){e.preventDefault();e.stopPropagation();window.toggleSidebar();},{passive:false});
+      el.addEventListener('click',function(e){e.stopPropagation();window.toggleSidebar();});
+    }
+  });
+  if(window.innerWidth<=600){var sb=document.getElementById('sidebar');if(sb)sb.classList.remove('collapsed');}
+}
+if(typeof renderPage==='function'){var _r=window.renderPage;window.renderPage=function(){_r.apply(this,arguments);setTimeout(bind,80);};}
+setTimeout(bind,400);
 })();
 </script>
 </body>

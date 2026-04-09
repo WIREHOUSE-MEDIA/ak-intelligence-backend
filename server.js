@@ -1,470 +1,603 @@
-const express = require("express");
-const cors = require("cors");
-const fetch = require("node-fetch");
-const session = require("express-session");
-const crypto = require("crypto");
-const path = require("path");
-
-const app = express();
-const PORT = process.env.PORT || 10000;
-
-const {
-  SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET,
-  CX_APP_ID, CX_TOKEN,
-  CANVA_CLIENT_ID, CANVA_CLIENT_SECRET,
-  AIRTABLE_TOKEN, AIRTABLE_BASE_ID,
-  GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
-  ANTHROPIC_API_KEY, FRONTEND_URL,
-} = process.env;
-
-const RENDER_BASE = "https://ak-intelligence-backend.onrender.com";
-const CANVA_REDIRECT = `${RENDER_BASE}/auth/canva/callback`;
-const GOOGLE_REDIRECT = `${RENDER_BASE}/auth/google/callback`;
-
-// Realistic browser User-Agent — helps bypass Spotify/Cloudflare bot checks
-const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-
-app.use(cors({ origin: "*", credentials: true }));
+const express = require('express');
+const path    = require('path');
+const app     = express();
+const PORT    = process.env.PORT || 3000;
 app.use(express.json());
-app.use(session({
-  secret: crypto.randomBytes(32).toString("hex"),
-  resave: false, saveUninitialized: true,
-  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
+
+// ── API HOSTS ────────────────────────────────────────────────
+const IG_HOST    = 'instagram-looter2.p.rapidapi.com';
+const IG2_HOST   = 'instagram-scraper-stable-api.p.rapidapi.com';
+const TT_HOST    = 'tiktok-scraper2.p.rapidapi.com';
+const TT2_HOST   = 'tiktok-api23.p.rapidapi.com';
+const SCRAPTIK   = 'scraptik.p.rapidapi.com';
+const YT_HOST    = 'youtube-v3-alternative.p.rapidapi.com';
+const SHZ_HOST   = 'shazam.p.rapidapi.com';
+const SHZC_HOST  = 'shazam-core.p.rapidapi.com';
+const AM_HOST    = 'apple-music24.p.rapidapi.com';
+const MF_HOST    = 'musicfetch2.p.rapidapi.com';
+
+const RAPID_KEY = process.env.RAPID_KEY || '';
+const rh = host => ({ 'x-rapidapi-key': RAPID_KEY, 'x-rapidapi-host': host, 'Content-Type': 'application/json' });
+
+// ── ENV ──────────────────────────────────────────────────────
+const JB_KEY  = process.env.JSONBIN_KEY           || '';
+const AK_BIN  = process.env.AK_JSONBIN_BIN        || '';
+const CR_BIN  = process.env.CREATOR_JSONBIN_BIN   || '';
+const JBIN    = 'https://api.jsonbin.io/v3';
+const AT_BASE = `https://api.airtable.com/v0/${process.env.AIRTABLE_BASE || 'appmEo06Ys7B1OawE'}`;
+const AT_KEY  = process.env.AIRTABLE_KEY || '';
+
+// ── CONFIG ───────────────────────────────────────────────────
+app.get('/config', (req, res) => res.json({
+  hasRapid:    !!RAPID_KEY,
+  hasJb:       !!(JB_KEY && AK_BIN),
+  hasCrJb:     !!(JB_KEY && CR_BIN),
+  hasAirtable: !!AT_KEY,
+  hasAnthropic:!!process.env.ANTHROPIC_API_KEY,
+  akBin: AK_BIN, crBin: CR_BIN,
+  jbKey: JB_KEY,  // creator dashboard reads this
+  jbBin: AK_BIN,
 }));
 
-// ─── SERVE DASHBOARD ─────────────────────────────────────
-// Looks for index.html at root OR in /public folder
-app.use(express.static(path.join(__dirname, "public")));
-app.use(express.static(__dirname)); // also serve from root
-
-app.get("/", (req, res) => {
-  const fs = require("fs");
-  // Check /public/index.html first, then root index.html
-  const publicPath = path.join(__dirname, "public", "index.html");
-  const rootPath = path.join(__dirname, "index.html");
-  if (fs.existsSync(publicPath)) {
-    res.sendFile(publicPath);
-  } else if (fs.existsSync(rootPath)) {
-    res.sendFile(rootPath);
-  } else {
-    res.json({
-      status: "ok",
-      service: "Wirehouse Media — AK Artist Intelligence Backend",
-      version: "3.1.0",
-      message: "Upload index.html to GitHub root or /public folder"
-    });
-  }
+app.get('/debug', (req, res) => {
+  const c = v => v ? `SET (${v.length}c)` : 'NOT SET';
+  res.send(`<pre style="font-size:14px;padding:2rem;background:#0d0a18;color:#c4a8e8;font-family:monospace">
+AK Intelligence Backend — Debug
+════════════════════════════════
+ANTHROPIC_API_KEY     ${c(process.env.ANTHROPIC_API_KEY)}
+AIRTABLE_KEY          ${c(AT_KEY)}
+RAPID_KEY             ${c(RAPID_KEY)}
+JSONBIN_KEY           ${c(JB_KEY)}
+AK_JSONBIN_BIN        ${c(AK_BIN)} ${AK_BIN}
+CREATOR_JSONBIN_BIN   ${c(CR_BIN)} ${CR_BIN}
+SPOTIFY_ID            ${c(process.env.SPOTIFY_ID)}
+SPOTIFY_SECRET        ${c(process.env.SPOTIFY_SECRET)}
+CHARTEX_ID            ${c(process.env.CHARTEX_ID)}
+CHARTEX_TOKEN         ${c(process.env.CHARTEX_TOKEN)}
+  </pre>`);
 });
 
-// ═══════════════════════════════════════════════════════════
-// SPOTIFY — with realistic headers + retry on HTML response
-// ═══════════════════════════════════════════════════════════
-let spToken = null, spExpiry = 0;
+// ════════════════════════════════════════════════════════════
+// JSONBIN PROXY
+// ════════════════════════════════════════════════════════════
+const jbHeaders = { 'X-Master-Key': JB_KEY, 'Content-Type': 'application/json', 'X-Bin-Meta': 'false' };
 
-async function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-async function getSpotifyToken() {
-  if (spToken && Date.now() < spExpiry) return spToken;
-  const creds = Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString("base64");
-  
-  // Try up to 3 times with delay
-  for(let attempt = 0; attempt < 3; attempt++){
-    if(attempt > 0) await sleep(1000 * attempt);
-    try {
-      const r = await fetch("https://accounts.spotify.com/api/token", {
-        method: "POST",
-        headers: {
-          "Authorization": `Basic ${creds}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": UA,
-          "Accept": "application/json",
-          "Accept-Language": "en-US,en;q=0.9",
-          "Cache-Control": "no-cache",
-        },
-        body: "grant_type=client_credentials"
-      });
-      const text = await r.text();
-      if(text.trim().startsWith("<")){
-        console.log(`Spotify returned HTML on attempt ${attempt+1}, retrying...`);
-        continue;
-      }
-      const d = JSON.parse(text);
-      if(!d.access_token) throw new Error(`No token in response: ${text.substring(0,100)}`);
-      spToken = d.access_token;
-      spExpiry = Date.now() + (d.expires_in - 60) * 1000;
-      return spToken;
-    } catch(e) {
-      if(attempt === 2) throw e;
-    }
-  }
-  throw new Error("Spotify auth failed after 3 attempts (bot check). Try again in 60 seconds.");
-}
-
-async function spFetch(path) {
-  const tok = await getSpotifyToken();
-  await sleep(200); // Small delay between token and data request
-  const r = await fetch(`https://api.spotify.com${path}`, {
-    headers: {
-      "Authorization": `Bearer ${tok}`,
-      "User-Agent": UA,
-      "Accept": "application/json",
-      "Accept-Language": "en-US,en;q=0.9",
-    }
-  });
-  const text = await r.text();
-  if(text.trim().startsWith("<")) {
-    // Force token refresh and retry once
-    spToken = null; spExpiry = 0;
-    await sleep(2000);
-    const tok2 = await getSpotifyToken();
-    const r2 = await fetch(`https://api.spotify.com${path}`, {
-      headers: { "Authorization": `Bearer ${tok2}`, "User-Agent": UA, "Accept": "application/json" }
-    });
-    const text2 = await r2.text();
-    if(text2.trim().startsWith("<")) throw new Error("Spotify is rate-limiting this IP. Try again in 60 seconds.");
-    return JSON.parse(text2);
-  }
-  if(!r.ok) throw new Error(`Spotify ${r.status}: ${text.substring(0,200)}`);
-  return JSON.parse(text);
-}
-
-app.get("/spotify/token", async (req, res) => {
-  try { res.json({ access_token: await getSpotifyToken() }); }
-  catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get("/spotify/artist", async (req, res) => {
-  try { res.json(await spFetch(`/v1/artists/${req.query.id||"3DiDSECUqqY1AuBP8qtaIa"}`)); }
-  catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get("/spotify/top-tracks", async (req, res) => {
-  try { res.json(await spFetch(`/v1/artists/${req.query.id||"3DiDSECUqqY1AuBP8qtaIa"}/top-tracks?market=${req.query.market||"US"}`)); }
-  catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get("/spotify/search", async (req, res) => {
-  try { res.json(await spFetch(`/v1/search?q=${encodeURIComponent(req.query.q)}&type=${req.query.type||"track"}&limit=${req.query.limit||10}`)); }
-  catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get("/spotify/albums", async (req, res) => {
-  try { res.json(await spFetch(`/v1/artists/${req.query.id||"3DiDSECUqqY1AuBP8qtaIa"}/albums?include_groups=album,single&market=US&limit=50`)); }
-  catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// ═══════════════════════════════════════════════════════════
-// CHARTEX — filter results to Alicia Keys only
-// ═══════════════════════════════════════════════════════════
-app.get("/chartex/sounds", async (req, res) => {
+app.get('/jb/ak', async (req, res) => {
+  if (!JB_KEY || !AK_BIN) return res.status(503).json({ error: 'Set AK_JSONBIN_BIN + JSONBIN_KEY in Render' });
   try {
-    let { search = "alicia keys", limit = 50 } = req.query; // Get more so we can filter
-    // Build smart search — use song name only (ChartEx searches sound names, not artist names)
-    const searchQuery = search.toLowerCase().includes("alicia") ? search : search;
-    
-    const url = `https://api.chartex.com/external/v1/tiktok-sounds/?search=${encodeURIComponent(searchQuery)}&limit=${limit}`;
-    const r = await fetch(url, {
-      headers: { "X-APP-ID": CX_APP_ID, "X-APP-TOKEN": CX_TOKEN }
-    });
-    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
-    
-    const raw = await r.json();
-    let items = raw?.data?.items || raw?.results || raw || [];
-    
-    // Filter to Alicia Keys sounds only (check artists field OR sound creator name)
-    const akFiltered = items.filter(s => {
-      const artist = (s.artists||"").toLowerCase();
-      const creator = (s.tiktok_sound_creator_name||"").toLowerCase();
-      const songName = (s.song_name||"").toLowerCase();
-      return artist.includes("alicia keys") || creator.includes("alicia keys") ||
-             artist.includes("alicia") || creator.includes("alicia");
-    });
-    
-    // If no AK-specific results, return all (for catalogue search where we don't have exact artist)
-    const finalItems = akFiltered.length > 0 ? akFiltered : items.slice(0, 20);
-    
-    res.json({ items: finalItems, total: finalItems.length, raw });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+    const r = await fetch(`${JBIN}/b/${AK_BIN}/latest`, { headers: jbHeaders });
+    const d = await r.json();
+    res.json(d?.record || d || {});
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ═══════════════════════════════════════════════════════════
-// AIRTABLE — full CRUD
-// ═══════════════════════════════════════════════════════════
-const AT_BASE = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`;
-const AT_H = () => ({ "Authorization": `Bearer ${AIRTABLE_TOKEN}`, "Content-Type": "application/json" });
-
-app.get("/airtable/:table", async (req, res) => {
+app.put('/jb/ak', async (req, res) => {
+  if (!JB_KEY || !AK_BIN) return res.status(503).json({ error: 'JSONBin not configured' });
   try {
-    const { maxRecords=100, filterByFormula, sort } = req.query;
-    let url = `${AT_BASE}/${encodeURIComponent(req.params.table)}?maxRecords=${maxRecords}`;
-    if(filterByFormula) url += `&filterByFormula=${encodeURIComponent(filterByFormula)}`;
-    if(sort) url += `&sort[0][field]=${encodeURIComponent(sort)}&sort[0][direction]=desc`;
-    const r = await fetch(url, { headers: AT_H() });
-    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
+    const r = await fetch(`${JBIN}/b/${AK_BIN}`, { method: 'PUT', headers: jbHeaders, body: JSON.stringify(req.body) });
     res.json(await r.json());
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/airtable/:table", async (req, res) => {
+// Creator Dashboard bin — read-only cross-pull
+app.get('/jb/creator', async (req, res) => {
+  if (!JB_KEY || !CR_BIN) return res.status(503).json({ error: 'Set CREATOR_JSONBIN_BIN in Render' });
+  try {
+    const r = await fetch(`${JBIN}/b/${CR_BIN}/latest`, { headers: jbHeaders });
+    const d = await r.json();
+    res.json(d?.record || d || {});
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ════════════════════════════════════════════════════════════
+// TIKTOK — tiktok-scraper2 + tiktok-api23
+// ════════════════════════════════════════════════════════════
+app.get('/api/tt-post', async (req, res) => {
+  const { videoId, videoUrl } = req.query;
+  if (!videoId) return res.status(400).json({ error: 'Missing videoId' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const url = videoUrl ? decodeURIComponent(videoUrl) : `https://www.tiktok.com/@user/video/${videoId}`;
+    const r = await fetch(
+      `https://${TT_HOST}/video/info_v2?video_url=${encodeURIComponent(url)}&video_id=${videoId}`,
+      { headers: rh(TT_HOST) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/tt-post-v2', async (req, res) => {
+  const { videoId } = req.query;
+  if (!videoId) return res.status(400).json({ error: 'Missing videoId' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(`https://${TT2_HOST}/api/post/detail?videoId=${videoId}`, { headers: rh(TT2_HOST) });
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/tt-music', async (req, res) => {
+  const { musicId } = req.query;
+  if (!musicId) return res.status(400).json({ error: 'Missing musicId' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(`https://${TT2_HOST}/api/music/info?musicId=${musicId}`, { headers: rh(TT2_HOST) });
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/tt-music-posts', async (req, res) => {
+  const { musicId, count = 30, cursor = 0 } = req.query;
+  if (!musicId) return res.status(400).json({ error: 'Missing musicId' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${TT2_HOST}/api/music/posts?musicId=${musicId}&count=${count}&cursor=${cursor}`,
+      { headers: rh(TT2_HOST) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/tt-user', async (req, res) => {
+  const { username } = req.query;
+  if (!username) return res.status(400).json({ error: 'Missing username' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(`https://${TT2_HOST}/api/user/info?uniqueId=${encodeURIComponent(username)}`, { headers: rh(TT2_HOST) });
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ════════════════════════════════════════════════════════════
+// INSTAGRAM — instagram-looter2 + instagram-scraper-stable-api
+// ════════════════════════════════════════════════════════════
+app.get('/api/ig-post', async (req, res) => {
+  const { postUrl } = req.query;
+  if (!postUrl) return res.status(400).json({ error: 'Missing postUrl' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const raw = decodeURIComponent(postUrl);
+    const code = raw.match(/\/(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/)?.[2];
+    if (!code) return res.status(400).json({ error: 'Cannot extract shortcode' });
+    const normalized = `https://www.instagram.com/p/${code}/`;
+    const r = await fetch(`https://${IG_HOST}/post?url=${encodeURIComponent(normalized)}`, { headers: rh(IG_HOST) });
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Stable IG scraper fallback
+app.get('/api/ig-post-v2', async (req, res) => {
+  const { postUrl } = req.query;
+  if (!postUrl) return res.status(400).json({ error: 'Missing postUrl' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const raw = decodeURIComponent(postUrl);
+    const code = raw.match(/\/(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/)?.[2];
+    if (!code) return res.status(400).json({ error: 'Cannot extract shortcode' });
+    const r = await fetch(
+      `https://${IG2_HOST}/get_media_data_v2.php?media_code=${code}`,
+      { headers: rh(IG2_HOST) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/ig-music', async (req, res) => {
+  const { audioId } = req.query;
+  if (!audioId) return res.status(400).json({ error: 'Missing audioId' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(`https://${IG_HOST}/music?id=${audioId}`, { headers: rh(IG_HOST) });
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/ig-user', async (req, res) => {
+  const { username } = req.query;
+  if (!username) return res.status(400).json({ error: 'Missing username' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(`https://${IG_HOST}/profile?username=${encodeURIComponent(username)}`, { headers: rh(IG_HOST) });
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// IG post comments
+app.get('/api/ig-comments', async (req, res) => {
+  const { mediaCode, sortOrder = 'popular' } = req.query;
+  if (!mediaCode) return res.status(400).json({ error: 'Missing mediaCode' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${IG2_HOST}/get_post_comments.php?media_code=${mediaCode}&sort_order=${sortOrder}`,
+      { headers: rh(IG2_HOST) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ════════════════════════════════════════════════════════════
+// SCRAPTIK — search, hashtags, no-watermark download
+// ════════════════════════════════════════════════════════════
+app.get('/api/scraptik-search-users', async (req, res) => {
+  const { keyword, count = 20, cursor = 0 } = req.query;
+  if (!keyword) return res.status(400).json({ error: 'Missing keyword' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${SCRAPTIK}/search-users?keyword=${encodeURIComponent(keyword)}&count=${count}&cursor=${cursor}`,
+      { headers: rh(SCRAPTIK) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/scraptik-search-posts', async (req, res) => {
+  const { keyword, count = 20, offset = 0 } = req.query;
+  if (!keyword) return res.status(400).json({ error: 'Missing keyword' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${SCRAPTIK}/search-posts?keyword=${encodeURIComponent(keyword)}&count=${count}&offset=${offset}&use_filters=0&publish_time=0&sort_type=0&region=US`,
+      { headers: rh(SCRAPTIK) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/scraptik-search-hashtags', async (req, res) => {
+  const { keyword, count = 20, cursor = 0 } = req.query;
+  if (!keyword) return res.status(400).json({ error: 'Missing keyword' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${SCRAPTIK}/search-hashtags?keyword=${encodeURIComponent(keyword)}&count=${count}&cursor=${cursor}`,
+      { headers: rh(SCRAPTIK) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/scraptik-hashtag-posts', async (req, res) => {
+  const { cid, count = 20, cursor = 0 } = req.query;
+  if (!cid) return res.status(400).json({ error: 'Missing cid (challenge ID)' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${SCRAPTIK}/hashtag-posts?cid=${cid}&count=${count}&cursor=${cursor}`,
+      { headers: rh(SCRAPTIK) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/scraptik-music', async (req, res) => {
+  const { music_id, region = 'US' } = req.query;
+  if (!music_id) return res.status(400).json({ error: 'Missing music_id' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${SCRAPTIK}/get-music?region=${region}&music_id=${music_id}`,
+      { headers: rh(SCRAPTIK) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/scraptik-music-posts', async (req, res) => {
+  const { music_id, count = 18, cursor = 0, region = 'US' } = req.query;
+  if (!music_id) return res.status(400).json({ error: 'Missing music_id' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${SCRAPTIK}/music-posts?music_id=${music_id}&count=${count}&cursor=${cursor}&region=${region}`,
+      { headers: rh(SCRAPTIK) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// TikTok video without watermark
+app.get('/api/tt-no-watermark', async (req, res) => {
+  const { aweme_id } = req.query;
+  if (!aweme_id) return res.status(400).json({ error: 'Missing aweme_id (video ID)' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${SCRAPTIK}/video-without-watermark?aweme_id=${aweme_id}`,
+      { headers: rh(SCRAPTIK) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Scraptik comments
+app.get('/api/scraptik-comments', async (req, res) => {
+  const { aweme_id, count = 10, cursor = 0, region = 'US' } = req.query;
+  if (!aweme_id) return res.status(400).json({ error: 'Missing aweme_id' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${SCRAPTIK}/list-comments?aweme_id=${aweme_id}&count=${count}&cursor=${cursor}&region=${region}`,
+      { headers: rh(SCRAPTIK) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ════════════════════════════════════════════════════════════
+// YOUTUBE
+// ════════════════════════════════════════════════════════════
+app.get('/api/yt-video', async (req, res) => {
+  const { videoId } = req.query;
+  if (!videoId) return res.status(400).json({ error: 'Missing videoId' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${YT_HOST}/videos?part=statistics%2Csnippet&id=${videoId}`,
+      { headers: rh(YT_HOST) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ════════════════════════════════════════════════════════════
+// SHAZAM + SHAZAMCORE
+// ════════════════════════════════════════════════════════════
+app.get('/api/shazam-charts', async (req, res) => {
+  const { country = 'US' } = req.query;
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${SHZ_HOST}/charts/get-top-songs-in-country?country_code=${country}`,
+      { headers: rh(SHZ_HOST) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/shazam-search', async (req, res) => {
+  const { q, limit = 5 } = req.query;
+  if (!q) return res.status(400).json({ error: 'Missing q' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${SHZ_HOST}/search?term=${encodeURIComponent(q)}&locale=en-US&offset=0&limit=${limit}`,
+      { headers: rh(SHZ_HOST) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ShazamCore — total shazams for a track
+app.get('/api/shazam-total', async (req, res) => {
+  const { trackId } = req.query;
+  if (!trackId) return res.status(400).json({ error: 'Missing trackId' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${SHZC_HOST}/v1/tracks/total-shazams?track_id=${trackId}`,
+      { headers: rh(SHZC_HOST) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ShazamCore — YouTube views for a track
+app.get('/api/shazam-yt', async (req, res) => {
+  const { trackId, name } = req.query;
+  if (!trackId) return res.status(400).json({ error: 'Missing trackId' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${SHZC_HOST}/v1/tracks/youtube-video?track_id=${trackId}${name ? '&name=' + encodeURIComponent(name) : ''}`,
+      { headers: rh(SHZC_HOST) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ════════════════════════════════════════════════════════════
+// APPLE MUSIC
+// ════════════════════════════════════════════════════════════
+app.get('/api/apple-track', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: 'Missing url (Apple Music track URL)' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${AM_HOST}/track/?url=${encodeURIComponent(decodeURIComponent(url))}`,
+      { headers: rh(AM_HOST) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/apple-album', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: 'Missing url (Apple Music album URL)' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${AM_HOST}/playlist1/?url=${encodeURIComponent(decodeURIComponent(url))}`,
+      { headers: rh(AM_HOST) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ════════════════════════════════════════════════════════════
+// MUSICFETCH — cross-platform lookup by ISRC/UPC/URL
+// ════════════════════════════════════════════════════════════
+app.get('/api/music-by-isrc', async (req, res) => {
+  const { isrc, country = 'US' } = req.query;
+  if (!isrc) return res.status(400).json({ error: 'Missing isrc' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${MF_HOST}/isrc?isrc=${isrc}&country=${country}`,
+      { headers: rh(MF_HOST) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/music-by-url', async (req, res) => {
+  const { url, country = 'US' } = req.query;
+  if (!url) return res.status(400).json({ error: 'Missing url (Spotify/Apple/etc URL)' });
+  if (!RAPID_KEY) return res.status(503).json({ error: 'RAPID_KEY not set' });
+  try {
+    const r = await fetch(
+      `https://${MF_HOST}/url?url=${encodeURIComponent(decodeURIComponent(url))}&country=${country}`,
+      { headers: rh(MF_HOST) }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ════════════════════════════════════════════════════════════
+// IMAGE PROXY — bypasses CDN cross-origin blocks
+// ════════════════════════════════════════════════════════════
+app.get('/api/proxy-image', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).send('Missing url');
+  try {
+    const r = await fetch(decodeURIComponent(url), {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Referer': 'https://www.instagram.com/' }
+    });
+    res.set('Content-Type', r.headers.get('content-type') || 'image/jpeg');
+    res.set('Cache-Control', 'public, max-age=3600');
+    r.body.pipe(res);
+  } catch (e) { res.status(500).send(e.message); }
+});
+
+// ════════════════════════════════════════════════════════════
+// CHARTEX
+// ════════════════════════════════════════════════════════════
+app.get('/chartex/sounds', async (req, res) => {
+  const { search, limit = 20 } = req.query;
+  if (!search) return res.status(400).json({ error: 'Missing search' });
+  try {
+    const CX_ID    = process.env.CHARTEX_ID    || '';
+    const CX_TOKEN = process.env.CHARTEX_TOKEN || '';
+    const headers  = CX_ID ? { 'X-APP-ID': CX_ID, 'X-APP-TOKEN': CX_TOKEN } : {};
+    const r = await fetch(
+      `https://api.chartex.com/external/v1/sounds/?search=${encodeURIComponent(search)}&limit=${limit}`,
+      { headers }
+    );
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ════════════════════════════════════════════════════════════
+// SPOTIFY
+// ════════════════════════════════════════════════════════════
+let spCache = { token: null, expiry: 0 };
+async function getSpToken() {
+  if (spCache.token && Date.now() < spCache.expiry) return spCache.token;
+  const id = process.env.SPOTIFY_ID, sec = process.env.SPOTIFY_SECRET;
+  if (!id || !sec) return null;
+  try {
+    const r = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=client_credentials&client_id=${id}&client_secret=${sec}`
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    spCache = { token: d.access_token, expiry: Date.now() + (d.expires_in - 60) * 1000 };
+    return spCache.token;
+  } catch { return null; }
+}
+
+app.get('/spotify/:path(*)', async (req, res) => {
+  const token = await getSpToken();
+  if (!token) return res.status(503).json({ error: 'Spotify not configured' });
+  try {
+    const qs = Object.keys(req.query).length ? '?' + new URLSearchParams(req.query).toString() : '';
+    const r = await fetch(`https://api.spotify.com/v1/${req.params.path}${qs}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ════════════════════════════════════════════════════════════
+// AIRTABLE
+// ════════════════════════════════════════════════════════════
+const atH = () => ({ Authorization: `Bearer ${AT_KEY}`, 'Content-Type': 'application/json' });
+
+app.get('/airtable/:table', async (req, res) => {
+  if (!AT_KEY) return res.status(503).json({ error: 'AIRTABLE_KEY not set' });
+  try {
+    const qs = req.query.filterByFormula ? `?filterByFormula=${encodeURIComponent(req.query.filterByFormula)}` : '';
+    const r = await fetch(`${AT_BASE}/${encodeURIComponent(req.params.table)}${qs}`, { headers: atH() });
+    res.json(await r.json());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/airtable/:table', async (req, res) => {
+  if (!AT_KEY) return res.status(503).json({ error: 'AIRTABLE_KEY not set' });
   try {
     const r = await fetch(`${AT_BASE}/${encodeURIComponent(req.params.table)}`, {
-      method: "POST", headers: AT_H(), body: JSON.stringify({ fields: req.body })
+      method: 'POST', headers: atH(), body: JSON.stringify({ fields: req.body })
     });
-    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
     res.json(await r.json());
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.patch("/airtable/:table/:id", async (req, res) => {
+app.patch('/airtable/:table/:id', async (req, res) => {
+  if (!AT_KEY) return res.status(503).json({ error: 'AIRTABLE_KEY not set' });
   try {
     const r = await fetch(`${AT_BASE}/${encodeURIComponent(req.params.table)}/${req.params.id}`, {
-      method: "PATCH", headers: AT_H(), body: JSON.stringify({ fields: req.body })
+      method: 'PATCH', headers: atH(), body: JSON.stringify({ fields: req.body })
     });
-    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
     res.json(await r.json());
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete("/airtable/:table/:id", async (req, res) => {
+app.delete('/airtable/:table/:id', async (req, res) => {
+  if (!AT_KEY) return res.status(503).json({ error: 'AIRTABLE_KEY not set' });
   try {
     const r = await fetch(`${AT_BASE}/${encodeURIComponent(req.params.table)}/${req.params.id}`, {
-      method: "DELETE", headers: AT_H()
+      method: 'DELETE', headers: atH()
     });
-    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
     res.json(await r.json());
-  } catch(e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ═══════════════════════════════════════════════════════════
-// CANVA OAUTH
-// ═══════════════════════════════════════════════════════════
-app.get("/auth/canva", (req, res) => {
-  const codeVerifier = crypto.randomBytes(64).toString("base64url");
-  const codeChallenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
-  const state = crypto.randomBytes(16).toString("hex");
-  req.session.canvaCodeVerifier = codeVerifier;
-  req.session.canvaState = state;
-  const scopes = "design:content:read design:content:write design:meta:read folder:read folder:write asset:read asset:write brandtemplate:content:read brandtemplate:meta:read comment:read comment:write profile:read";
-  const authUrl = new URL("https://www.canva.com/api/oauth/authorize");
-  authUrl.searchParams.set("code_challenge", codeChallenge);
-  authUrl.searchParams.set("code_challenge_method", "S256");
-  authUrl.searchParams.set("scope", scopes);
-  authUrl.searchParams.set("response_type", "code");
-  authUrl.searchParams.set("client_id", CANVA_CLIENT_ID);
-  authUrl.searchParams.set("state", state);
-  authUrl.searchParams.set("redirect_uri", CANVA_REDIRECT);
-  res.redirect(authUrl.toString());
-});
+// ════════════════════════════════════════════════════════════
+// ANTHROPIC — Hey Jessi
+// ════════════════════════════════════════════════════════════
+const Anthropic = require('@anthropic-ai/sdk');
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-app.get("/auth/canva/callback", async (req, res) => {
+app.post('/ai/chat', async (req, res) => {
+  const { messages, system } = req.body;
+  if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: 'messages array required' });
+  const sysPrompt = system || `You are Hey Jessi, the AI intelligence partner for Alicia Keys at Wirehouse Media.
+You know AK's full catalog, streaming performance, TikTok sound analytics, campaign data (Con Cora Gala x Karol G, Plentiful ft. Pusha T, Hell's Kitchen Broadway), creator CRM, budget tracking, and social listening.
+Be specific, data-driven, and actionable. Use real numbers from the conversation context.
+Key facts: Spotify 36.6M monthly listeners, Instagram 28M followers, TikTok 8M followers, Girl on Fire 1.7M creates, Try Sleeping 4370+ creates from Con Cora Gala campaign.`;
   try {
-    const { code, state } = req.query;
-    if(state !== req.session.canvaState) return res.status(400).send("State mismatch");
-    const r = await fetch("https://api.canva.com/rest/v1/oauth/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code_verifier: req.session.canvaCodeVerifier,
-        code, redirect_uri: CANVA_REDIRECT,
-        client_id: CANVA_CLIENT_ID, client_secret: CANVA_CLIENT_SECRET
-      }).toString()
+    const response = await anthropic.messages.create({
+      model: 'claude-opus-4-5-20251101',
+      max_tokens: 2048,
+      system: sysPrompt,
+      messages: messages.map(m => ({ role: m.role, content: m.content }))
     });
-    if(!r.ok) return res.status(400).json({ error: await r.text() });
-    const tokens = await r.json();
-    req.session.canvaToken = tokens.access_token;
-    req.session.canvaRefresh = tokens.refresh_token;
-    res.redirect(`${FRONTEND_URL||RENDER_BASE}?canva=connected`);
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get("/canva/token", (req, res) => {
-  if(!req.session.canvaToken) return res.status(401).json({ error: "Not authenticated with Canva" });
-  res.json({ access_token: req.session.canvaToken });
-});
-
-app.post("/canva/design", async (req, res) => {
-  try {
-    if(!req.session.canvaToken) return res.status(401).json({ error: "Connect Canva first" });
-    const r = await fetch("https://api.canva.com/rest/v1/designs", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${req.session.canvaToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ design_type: { type: req.body.designType||"instagram_post" }, title: req.body.title })
-    });
-    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
-    res.json(await r.json());
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-// ═══════════════════════════════════════════════════════════
-// GOOGLE OAUTH
-// ═══════════════════════════════════════════════════════════
-app.get("/auth/google", (req, res) => {
-  const state = crypto.randomBytes(16).toString("hex");
-  req.session.googleState = state;
-  const scopes = ["https://www.googleapis.com/auth/calendar","https://www.googleapis.com/auth/calendar.events","https://www.googleapis.com/auth/drive.file","https://www.googleapis.com/auth/drive.metadata.readonly","profile","email"].join(" ");
-  const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-  authUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
-  authUrl.searchParams.set("redirect_uri", GOOGLE_REDIRECT);
-  authUrl.searchParams.set("response_type", "code");
-  authUrl.searchParams.set("scope", scopes);
-  authUrl.searchParams.set("access_type", "offline");
-  authUrl.searchParams.set("state", state);
-  authUrl.searchParams.set("prompt", "consent");
-  res.redirect(authUrl.toString());
-});
-
-app.get("/auth/google/callback", async (req, res) => {
-  try {
-    const { code, state } = req.query;
-    if(state !== req.session.googleState) return res.status(400).send("State mismatch");
-    const r = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ code, client_id: GOOGLE_CLIENT_ID, client_secret: GOOGLE_CLIENT_SECRET, redirect_uri: GOOGLE_REDIRECT, grant_type: "authorization_code" }).toString()
-    });
-    if(!r.ok) return res.status(400).json({ error: await r.text() });
-    const tokens = await r.json();
-    req.session.googleToken = tokens.access_token;
-    req.session.googleRefresh = tokens.refresh_token;
-    res.redirect(`${FRONTEND_URL||RENDER_BASE}?google=connected`);
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get("/google/calendar/events", async (req, res) => {
-  try {
-    if(!req.session.googleToken) return res.status(401).json({ error: "Connect Google first", authUrl: "/auth/google" });
-    const { timeMin=new Date().toISOString(), maxResults=50 } = req.query;
-    const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&maxResults=${maxResults}&singleEvents=true&orderBy=startTime`, {
-      headers: { Authorization: `Bearer ${req.session.googleToken}` }
-    });
-    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
-    res.json(await r.json());
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post("/google/calendar/events", async (req, res) => {
-  try {
-    if(!req.session.googleToken) return res.status(401).json({ error: "Connect Google first" });
-    const r = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
-      method: "POST", headers: { Authorization: `Bearer ${req.session.googleToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify(req.body)
-    });
-    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
-    res.json(await r.json());
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get("/google/drive/files", async (req, res) => {
-  try {
-    if(!req.session.googleToken) return res.status(401).json({ error: "Connect Google first" });
-    const r = await fetch(`https://www.googleapis.com/drive/v3/files?pageSize=${req.query.pageSize||20}&fields=files(id,name,mimeType,webViewLink,thumbnailLink,createdTime,modifiedTime)`, {
-      headers: { Authorization: `Bearer ${req.session.googleToken}` }
-    });
-    if(!r.ok) return res.status(r.status).json({ error: await r.text() });
-    res.json(await r.json());
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get("/auth/status", (req, res) => {
-  res.json({
-    canva: !!req.session.canvaToken,
-    google: !!req.session.googleToken,
-    spotify: !!spToken && Date.now() < spExpiry,
-    airtable: !!AIRTABLE_TOKEN,
-    chartex: !!CX_TOKEN,
-    ai: !!ANTHROPIC_API_KEY
-  });
-});
-
-// ═══════════════════════════════════════════════════════════
-// CLOUDSWAY — AI Web Search proxy (avoids CORS from browser)
-// ═══════════════════════════════════════════════════════════
-app.get("/cloudsway/search", async (req, res) => {
-  try {
-    const { q, count = 10 } = req.query;
-    if (!q) return res.status(400).json({ error: "q parameter required" });
-    const CLOUDSWAY_KEY = process.env.CLOUDSWAY_KEY;
-    if (!CLOUDSWAY_KEY) return res.status(500).json({ error: "CLOUDSWAY_KEY not set in Render env vars" });
-    const r = await fetch(`https://aisearchapi.cloudsway.net/api/search/smart?q=${encodeURIComponent(q)}&count=${count}`, {
-      headers: { "Authorization": CLOUDSWAY_KEY, "Content-Type": "application/json" }
-    });
-    if (!r.ok) {
-      const txt = await r.text();
-      return res.status(r.status).json({ error: `Cloudsway error: ${txt.substring(0, 200)}` });
-    }
-    const data = await r.json();
-    res.json(data);
+    res.json({ reply: response.content[0]?.text || '' });
   } catch (e) {
+    console.error('[AI]', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// ═══════════════════════════════════════════════════════════
-// AI CHAT — Claude with full AK context
-// ═══════════════════════════════════════════════════════════
-const AK_SYSTEM = `You are "Hey Jessi" — the AI Intelligence Partner for Wirehouse Media's AK Artist Intelligence Platform, built for Alicia Keys. You work like a full digital team combined into one.
+// ════════════════════════════════════════════════════════════
+// SPA — serve index.html for all routes (hash routing)
+// ════════════════════════════════════════════════════════════
+app.use(express.static(path.join(__dirname)));
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-WHO YOU ARE: Sharp, professional, deeply knowledgeable about AK's brand, voice, catalog, business ventures, and digital strategy. You write in AK's voice when asked. You analyze data like a senior data analyst. You build coverage reports like a PR firm. You write shotlists like an experienced creative director. You strategize like a veteran music industry consultant.
-
-AK VERIFIED DATA (April 2026):
-- Instagram @aliciakeys: 28M followers, 0.61% engagement, 165.8K avg likes
-- TikTok @aliciakeys: 8M followers, 50.5M total likes
-- Spotify: 36.6M monthly listeners, 1.2B+ all-time streams
-- AGENCY: Wirehouse Media (NOT Roc Nation)
-
-CON CORA GALA WITH KAROL G (Mar 19-28, 2026):
-- Total reach: 43.9M+ (collab reel 32.9M views + 1.6M likes)
-- Try Sleeping with a Broken Heart: 4,370 TikTok creates, 1,096,600 TikTok views, 571,333 Spotify streams in 14 days
-- Worldwide streaming: +21% (Spotify +24%, Apple Music +22%)
-- Latin streaming: +59% (Spotify +66%) — Karol G crossover confirmed
-- Peak: March 25 aligned with viral social activity
-- Spotify follower spike: +6,045 on March 23 (+93.6% vs avg)
-- Cover trend: Male creators doing emotional covers — 261.6K views, 49K likes in 3 days
-
-OTHER KEY DATA:
-- Girl on Fire: 1.71M TikTok creates, 932M video views
-- Plentiful ft. Pusha T: 695 TikTok creates, 2.1M views
-- Hell's Kitchen Broadway: sell-out run spring 2026
-
-AK'S VOICE: Warm, powerful, spiritual, soulful. Calls fans "family." Celebrates women, healing, music, community. Never corporate — always personal and real.
-
-YOU CAN DO:
-1. COVERAGE REPORTS — Executive summary, top narratives with post handles + engagement numbers, streaming impact worldwide + Latin, TikTok creates/views, key insights, trends, recommendations
-2. SHOTLISTS & CAPTURE PLANS — Time-stamped, concept names, reference links, time estimates, thumbnail checkpoints, requestor tags (KSC/AKW)
-3. COPY — IG captions, TikTok scripts, newsletters, press releases, creator briefs — all in AK's voice
-4. CREATOR STRATEGY — Source creators, write mass outreach emails, write campaign briefs
-5. TEAM WORKFLOW — Agendas, schedules, content calendars, approval workflows, newsletters, presentations
-6. ANALYSIS — Which songs to push, Latin market ops, trending sounds, sound page performance
-
-If user provides Sony DSRP data, incorporate those exact numbers into the analysis.
-Use headers, bullets, bold for reports. Be specific with numbers. Include real links.`;
-
-
-app.post("/ai/chat", async (req, res) => {
-  try {
-    const { messages } = req.body;
-    if(!messages || !Array.isArray(messages)) return res.status(400).json({ error: "messages array required" });
-    if(!ANTHROPIC_API_KEY) return res.status(500).json({ 
-      // Key is in Render environment variables — never hardcode here
-
-    });
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 2000, system: AK_SYSTEM, messages })
-    });
-    if(!r.ok) {
-      const txt = await r.text();
-      return res.status(r.status).json({ error: `Anthropic error: ${txt}` });
-    }
-    const data = await r.json();
-    res.json({ reply: data.content?.[0]?.text || "No response" });
-  } catch(e) { res.status(500).json({ error: e.message }); }
-});
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Wirehouse Media — AK Intelligence Backend v3.0 running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`AK Intelligence running on port ${PORT}`));

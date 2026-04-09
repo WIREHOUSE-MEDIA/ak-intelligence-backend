@@ -203,7 +203,7 @@ function buildDataInputSection(tabId, tabName){
       <button class="btno bsm" style="font-size:9px" onclick="openDataInput('${tabId}','${tabName}')">+ Add Section</button>
       <select class="inp" style="font-size:9px;height:28px;padding:2px 8px" onchange="importDataFromTab(this.value,'${tabId}')" title="Import a section from another tab">
         <option value="">⊕ Import from tab…</option>
-        ${["overview","platforms","dsp","catalogue","campaignreport","viral","listening","ai","campaigns","crm","budget","calendar","drafts"].map(t=>`<option value="${t}">${t}</option>`).join("")}
+        ${[["overview","Overview"],["platforms","Platforms"],["dsp","DSP & Streaming"],["catalogue","Full Catalogue"],["chartex","ChartEx Live"],["campaignreport","Campaign Report"],["viral","Viral Analyzer"],["listening","Social Listening"],["ai","Hey Jessi ✦"],["campaigns","Campaign Manager"],["crm","Creator CRM"],["budget","Budget Tracker"],["calendar","Calendar & Canva"],["drafts","Content Drafts"]].map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}
       </select>
     </div>
   </div>
@@ -794,19 +794,24 @@ const FEED=[
 ];
 
 // ═══ OVERVIEW ═══
-function pgOverview(){return`
-${buildCreatorSummaryPanel()}
-<div class="an">✅ Spotify loading LIVE · Creator Dashboard data pulls from AK-CREATOR-DASHBOARD JSONBin · Mentions = Brand24 (coming soon)</div>
-<div class="g4">
-  ${kpi("Spotify Monthly Listeners","36.6M","+8.3% (30d)","#1DB954","live")}
-  ${kpi("Instagram Followers","28M","0.61% engagement","#E1306C","live")}
-  ${kpi("TikTok Followers","8M","50.5M total likes","#69C9D0","live")}
-  ${kpi("Est. Total Mentions","~2.4M","Brand24 — coming soon","#c8a96e","wait")}
+function pgOverview(){
+  const allPosts=getAllCreatorPosts();
+  const livePosts=getLivePosts?getLivePosts():allPosts.filter(p=>p.status==="live");
+  const creatorCamps=getCreatorCampaigns();
+  const totalViews=allPosts.reduce((a,p)=>a+Number(p.views||0),0);
+  const fmt2=n=>n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e3?Math.round(n/1e3)+"K":String(Math.round(n)||"–");
+  return`
+<div class="an">✅ Spotify loading LIVE · Creator Dashboard syncs from AK-CREATOR-DASHBOARD bin · Refresh to pull latest creator data</div>
+<div class="g4" style="margin-bottom:11px">
+  ${kpi("Spotify Monthly","36.6M","+8.3% (30d)","#1DB954","live")}
+  ${kpi("Instagram","28M","0.61% eng","#E1306C","live")}
+  ${kpi("TikTok","8M","50.5M likes","#69C9D0","live")}
+  ${kpi("Creator Posts",allPosts.length,livePosts.length+" live","#a855f7",null)}
 </div>
-<div class="g2">
+<div class="g2" style="margin-bottom:11px">
   <div class="card"><div class="cl">Mention Trend — 30 Days</div>
     <canvas id="tc" height="54" style="width:100%;display:block;margin-top:4px"></canvas>
-    <div style="font-size:10px;color:var(--tx2);margin-top:7px">Peak: <strong style="color:var(--gold)">Con Cora Gala</strong> — Alicia Keys & <strong style="color:var(--gold)">Karol G</strong> · Mar 25</div>
+    <div style="font-size:10px;color:var(--tx2);margin-top:7px">Peak: <strong style="color:var(--gold)">Con Cora Gala</strong> — AK & <strong style="color:var(--gold)">Karol G</strong> · Mar 25</div>
   </div>
   <div class="card"><div class="cl">Sentiment</div>
     <div style="display:flex;border-radius:4px;overflow:hidden;height:7px;margin:8px 0"><div style="width:72%;background:#a8f0c8"></div><div style="width:19%;background:#f0e68c"></div><div style="width:9%;background:#f09a9a"></div></div>
@@ -814,16 +819,44 @@ ${buildCreatorSummaryPanel()}
     <div style="font-size:10px;color:var(--tx2);margin-top:8px">Top: <span style="color:var(--gold)">Con Cora Gala · Karol G · Plentiful · Girl on Fire</span></div>
   </div>
 </div>
-${buildActivePosts(4)}
-<div class="g2">
+${creatorCamps.length?`
+<div class="card" style="margin-bottom:11px;border-left:3px solid #a855f7">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
+    <div class="cl" style="margin-bottom:0;color:#a855f7">🟣 Creator Dashboard — Live Data</div>
+    <div style="display:flex;gap:6px">
+      <button onclick="window.loadCreatorData().then(()=>renderPage())" class="btno bsm" style="font-size:9px">⟳ Refresh</button>
+      <a href="https://creator-dashboard-v4xe.onrender.com" target="_blank" class="btno bsm" style="text-decoration:none;font-size:9px">Open Dashboard ↗</a>
+    </div>
+  </div>
+  <div class="g4" style="margin-bottom:11px">
+    ${kpi("Campaigns",creatorCamps.length,"creator dashboard","var(--purple)",null)}
+    ${kpi("🟣 Live Posts",livePosts.length,"currently live","#a855f7",null)}
+    ${kpi("Creator Views",fmt2(totalViews),"all posts","var(--gold)",null)}
+    ${kpi("Pending Review",allPosts.filter(p=>p.status==="review"||p.status==="draft").length,"drafts","#888",null)}
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    ${creatorCamps.slice(0,3).map(c=>{
+      const cp=getCreatorPosts(c.id);
+      const cv=cp.reduce((a,p)=>a+Number(p.views||0),0);
+      const cl=cp.filter(p=>p.status==="live").length;
+      return '<a href="https://creator-dashboard-v4xe.onrender.com/#/campaign/'+c.id+'" target="_blank"'+
+        ' style="padding:8px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;text-decoration:none;flex:1;min-width:160px">'+
+        '<div style="font-size:11px;font-weight:700;color:var(--gold)">'+c.name+'</div>'+
+        '<div style="font-size:10px;color:var(--tx2)">'+(c.artist||"Alicia Keys")+'</div>'+
+        '<div style="font-size:10px;color:#69C9D0;margin-top:5px">'+cp.length+' posts · '+cl+' live · '+fmt2(cv)+' views</div>'+
+      '</a>';
+    }).join("")}
+</div>`:``}
+<div class="g2" style="margin-bottom:11px">
   <div class="card"><div class="cl">Share of Voice</div>${[["Alicia Keys",38,"#c8a96e"],["H.E.R.",22,"#69C9D0"],["Jhené Aiko",17,"#E1306C"],["SZA",14,"#1DB954"],["Others",9,"#606075"]].map(([l,p,c])=>bar(l,p+"%",p*2.5,c)).join("")}</div>
   <div class="card"><div class="cl">Geographic Reach</div>${[["New York",18],["Los Angeles",14],["London",11],["Atlanta",9],["Lagos",7],["Toronto",6],["Chicago",5],["Paris",4]].map(([l,p])=>bar(l,p+"%",p*5,"#c8a96e")).join("")}</div>
 </div>
-<div class="card"><div class="cl">Trending Hashtags</div>
+<div class="card" style="margin-bottom:11px"><div class="cl">Trending Hashtags</div>
   <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px">${["#AliciaKeys","#KarolG","#ConCoraGala","#Plentiful","#PushaT","#HellsKitchenBroadway","#Fallin","#GirlOnFire","#NoOne","#TrySleepingWithABrokenHeart","#IfIAintGotYou","#LaAurora"].map(t=>pill("#c8a96e",t)).join("")}</div>
 </div>
 ${buildDataInputSection("overview","Overview")}`;
 }
+
 
 // ═══ PLATFORMS ═══
 function pgPlatforms(){
@@ -2082,192 +2115,175 @@ window.jessiExportTxt=()=>{
 };
 
 // ═══ CAMPAIGNS ═══
-let CAMPAIGNS_DATA=[
-  {id:"c1",name:"Con Cora Gala Momentum",color:"#c8a96e",status:"active",goal:"Ride viral moment — Alicia Keys + Karol G",start:"Apr 7",end:"Apr 21",budget:9900,spent:9900,
-    creators:["Jade Elia @jadeelia","DeeJ Music @deejmusic_"],platforms:["TikTok","Instagram"],sound:"Try Sleeping with a Broken Heart",igSound:"",
-    kpis:{Reach:"4.8M",Creates:"695+",Views:"2.1M",Sentiment:"94% positive"},
-    links:[{l:"⚡ ChartEx Sound",u:"https://chartex.com/tiktok/sounds/6750463448448761858",c:"#69C9D0"},{l:"TikTok Sound",u:"https://www.tiktok.com/music/Try-Sleeping-with-a-Broken-Heart-6750463448448761858",c:"#69C9D0"},{l:"Billboard",u:"https://www.billboard.com/music/pop/alicia-keys/",c:"#c8a96e"}],
-    notes:"Con Cora Gala viral moment. 43.9M+ reach. Latin market +59%."},
-  {id:"c2",name:"Plentiful — Cross-Platform Push",color:"#69C9D0",status:"negotiating",goal:"YouTube + Instagram for Plentiful ft. Pusha T",start:"coming soon",end:"Apr 30",budget:6300,spent:0,
-    creators:["Marcus Flow @marcusflow","Priya Sounds @priyasounds"],platforms:["YouTube","Instagram"],sound:"Plentiful ft. Pusha T",igSound:"",
-    kpis:{Reach:"2.8M est.",Creates:"–",Views:"–",Sentiment:"–"},
-    links:[{l:"⚡ ChartEx Song",u:"https://chartex.com/song/alicia-keys-plentiful-originals-feat-pusha-t-1651917",c:"#c8a96e"},{l:"Spotify",u:"https://open.spotify.com/search/Plentiful+Alicia+Keys+Pusha+T",c:"#1DB954"}],
-    notes:""},
-  {id:"c3",name:"Hell's Kitchen Broadway Wave",color:"#E1306C",status:"draft review",goal:"Content around Broadway sell-out run",start:"Apr 20",end:"May 10",budget:900,spent:0,
-    creators:["Anika Creates @anikacreates"],platforms:["TikTok","Instagram"],sound:"Kaleidoscope (Hell's Kitchen OST)",igSound:"",
-    kpis:{Reach:"420K est.",Creates:"–",Views:"–",Sentiment:"–"},
-    links:[{l:"Hell's Kitchen",u:"https://www.hellskitchenmusical.com/",c:"#E1306C"},{l:"⚡ ChartEx",u:"https://chartex.com/artist/alicia-keys-9779",c:"#c8a96e"}],
-    notes:""},
-];
+let CAMPAIGNS_DATA=[];
+// Load campaigns from creator dashboard (real data) + any local additions
+(function(){
+  try{
+    var saved=localStorage.getItem("wm_camps");
+    if(saved){CAMPAIGNS_DATA=JSON.parse(saved);}
+  }catch(e){}
+  // If no local data, will be populated from creator dashboard on load
+  // and from JSONBin restore
+})();
+function saveCampaignsLocal(){
+  try{localStorage.setItem("wm_camps",JSON.stringify(CAMPAIGNS_DATA));}catch(e){}
+}
+// Convert creator dashboard campaign to AK Intelligence campaign format
+function syncCampsFromCreator(){
+  var crCamps=getCreatorCampaigns();
+  if(!crCamps.length)return;
+  crCamps.forEach(function(cc){
+    var existing=CAMPAIGNS_DATA.find(function(c){return c.id===cc.id||c.crId===cc.id;});
+    if(!existing){
+      var posts=getCreatorPosts(cc.id);
+      var totalViews=posts.reduce(function(a,p){return a+Number(p.views||0);},0);
+      var totalBudget=posts.reduce(function(a,p){return a+Number(p.budget||0);},0);
+      var livePosts=posts.filter(function(p){return p.status==="live";}).length;
+      CAMPAIGNS_DATA.push({
+        id:cc.id,crId:cc.id,name:cc.name,color:"#a855f7",
+        status:livePosts>0?"active":"planning",
+        goal:cc.desc||"Creator campaign — "+cc.name,
+        start:cc.createdAt?new Date(cc.createdAt).toLocaleDateString("en-US",{month:"short",day:"numeric"}):"-",
+        end:"-",budget:totalBudget,spent:totalBudget,
+        creators:posts.slice(0,3).map(function(p){return p.handle?"@"+p.handle:""}).filter(Boolean),
+        platforms:["TikTok","Instagram"],
+        sound:cc.ttUrl?cc.ttUrl.split("\n")[0]:"",igSound:cc.igUrl||"",
+        kpis:{
+          Posts:String(posts.length),Live:String(livePosts),
+          Views:totalViews>=1e6?(totalViews/1e6).toFixed(1)+"M":totalViews>=1e3?Math.round(totalViews/1e3)+"K":String(Math.round(totalViews)),
+          Budget:"$"+totalBudget.toLocaleString()
+        },
+        links:cc.cxUrl?[{l:"⚡ ChartEx",u:cc.cxUrl}]:[],
+        soundLink:cc.ttUrl?cc.ttUrl.split("\n")[0]:"",
+        spLink:cc.spUrl||""
+      });
+    }
+  });
+  saveCampaignsLocal();
+}
+window.addEventListener("load",function(){
+  setTimeout(function(){
+    if(typeof syncCampsFromCreator==="function")syncCampsFromCreator();
+  },2000);
+});
+
+
 function saveCampaignsLocal(){localStorage.setItem("wm_campaigns",JSON.stringify(CAMPAIGNS_DATA));}
 function loadCampaignsLocal(){const d=localStorage.getItem("wm_campaigns");if(d){try{CAMPAIGNS_DATA=JSON.parse(d);}catch{}}}
 loadCampaignsLocal();
 
 const CAMP_ST={active:"#a8f0c8",negotiating:"#f0e68c","draft review":"#c8a96e",planning:"#888",archived:"#333"};
+function buildCreatorPostCard(p, campId){
+  var vv=Number(p.views)||0,lk=Number(p.likes)||0,cm=Number(p.comments)||0;
+  var er=vv>0?((lk+cm)/vv*100).toFixed(1)+"%":"—";
+  var SC={draft:"#888",review:"#f0c040",approved:"#4caf50",live:"#a855f7"};
+  var SL={draft:"📝",review:"⏳",approved:"✓",live:"🟣"};
+  var st=p.status||"draft";
+  var link=p.postUrl||"https://creator-dashboard-v4xe.onrender.com/#/campaign/"+campId;
+  var fmt2=function(n){n=Number(n)||0;return n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e3?Math.round(n/1e3)+"K":String(Math.round(n));};
+  var card=document.createElement("div");
+  card.style.cssText="width:140px;flex-shrink:0;background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;overflow:hidden;cursor:pointer";
+  card.onclick=function(){window.open(link,"_blank");};
+  var mediaDiv=document.createElement("div");
+  mediaDiv.style.cssText="position:relative;width:100%;padding-bottom:177.78%;background:#000;overflow:hidden";
+  if(p.thumbnail){
+    var img=document.createElement("img");
+    img.src=p.thumbnail;
+    img.style.cssText="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9";
+    img.onerror=function(){this.style.display="none";};
+    mediaDiv.appendChild(img);
+  }else{
+    var icon=document.createElement("div");
+    icon.style.cssText="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px";
+    icon.textContent=p.platform==="instagram"?"📸":"🎵";
+    mediaDiv.appendChild(icon);
+  }
+  var badge=document.createElement("div");
+  badge.style.cssText="position:absolute;top:5px;right:5px;font-size:9px;padding:2px 6px;border-radius:10px;background:"+SC[st]+"22;color:"+SC[st]+";font-weight:700;border:.5px solid "+SC[st]+"44";
+  badge.textContent=SL[st]+" "+st;
+  mediaDiv.appendChild(badge);
+  card.appendChild(mediaDiv);
+  var info=document.createElement("div");
+  info.style.cssText="padding:7px 8px";
+  info.innerHTML="<div style='font-size:10px;font-weight:700;color:#69C9D0'>"+(p.handle?"@"+p.handle:"–")+"</div>"+
+    "<div style='font-size:9px;color:var(--tx2);margin-top:3px'>"+(vv?fmt2(vv)+" views":"–")+" · "+er+" eng</div>"+
+    (p.budget&&Number(p.budget)>0?"<div style='font-size:9px;color:#c8a96e;margin-top:2px'>💰 $"+Number(p.budget).toLocaleString()+"</div>":"");
+  card.appendChild(info);
+  return card.outerHTML;
+}
+
 function pgCampaigns(){
-  const totB=CAMPAIGNS_DATA.reduce((a,c)=>a+c.budget,0);
-  const totS=CAMPAIGNS_DATA.reduce((a,c)=>a+c.spent,0);
+  const crCamps=getCreatorCampaigns();
+  const allCreatorPosts=getAllCreatorPosts();
+  const fmt2=n=>Number(n)>=1e6?(Number(n)/1e6).toFixed(1)+"M":Number(n)>=1e3?Math.round(Number(n)/1e3)+"K":String(Math.round(Number(n))||"–");
+  if(typeof syncCampsFromCreator==="function")syncCampsFromCreator();
+  const allCamps=CAMPAIGNS_DATA;
+  const totB=allCamps.reduce((a,c)=>a+Number(c.budget||0),0);
+  const livePosts=allCreatorPosts.filter(p=>p.status==="live");
   return`
-<div style="display:flex;gap:7px;margin-bottom:11px;align-items:center;flex-wrap:wrap">
-  <div style="font-size:10px;color:var(--tx2);flex:1">All fields editable · Linked to CRM, Budget Tracker, Calendar, Canva</div>
-  <button class="btn bsm" onclick="openAddCampaign()">+ New Campaign</button>
-  <button class="btno bsm" onclick="go('crm')">Creator CRM →</button>
-  <button class="btno bsm" onclick="go('budget')">Budget →</button>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;flex-wrap:wrap;gap:8px">
+  <div>
+    <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700">Campaign Manager</div>
+    <div style="font-size:10px;color:var(--tx2);margin-top:2px">Synced from Creator Dashboard · ${crCamps.length} campaigns · ${allCreatorPosts.length} total posts</div>
+  </div>
+  <div style="display:flex;gap:7px;flex-wrap:wrap">
+    <button onclick="window.loadCreatorData().then(()=>renderPage())" class="btno bsm" style="font-size:9px">⟳ Sync</button>
+    <a href="https://creator-dashboard-v4xe.onrender.com" target="_blank" class="btn bsm" style="text-decoration:none;font-size:9px">+ New Campaign ↗</a>
+  </div>
 </div>
 <div class="g4" style="margin-bottom:11px">
-  ${kpi("Active Campaigns",CAMPAIGNS_DATA.filter(c=>c.status!=="archived").length,"Active","var(--tx)",null)}
+  ${kpi("Total Campaigns",allCamps.length,allCamps.filter(c=>c.status==="active").length+" active","var(--purple)",null)}
   ${kpi("Total Budget","$"+totB.toLocaleString(),"all campaigns","#c8a96e",null)}
-  ${kpi("Spent","$"+totS.toLocaleString(),Math.round(totS/totB*100)+"% of budget","#a8f0c8",null)}
-  ${kpi("Remaining","$"+(totB-totS).toLocaleString(),"available","#888",null)}
+  ${kpi("Creator Posts",allCreatorPosts.length,livePosts.length+" live","#a855f7",null)}
+  ${kpi("Total Views",fmt2(allCreatorPosts.reduce((a,p)=>a+Number(p.views||0),0)),"all posts","var(--gold)",null)}
 </div>
-${CAMPAIGNS_DATA.map((c,ci)=>`
-<div class="card" style="border-left:3px solid ${c.color};margin-bottom:10px" id="camp-${c.id}">
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:11px;gap:8px;flex-wrap:wrap">
-    <div style="flex:1">
-      <input class="ec" value="${c.name}" style="font-weight:700;font-size:15px;color:${c.color};font-family:'Syne',sans-serif;min-width:200px" onchange="CAMPAIGNS_DATA[${ci}].name=this.value;saveCampaignsLocal()">
-      <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;align-items:center">
-        <select class="ec" style="width:auto;color:${CAMP_ST[c.status]||"#888"};font-size:9px" onchange="CAMPAIGNS_DATA[${ci}].status=this.value;saveCampaignsLocal()">
-          ${["active","negotiating","draft review","planning","archived"].map(s=>`<option value="${s}" ${c.status===s?"selected":""}>${s}</option>`).join("")}
-        </select>
-        <span style="font-size:10px;color:var(--tx3)">${c.start} → ${c.end}</span>
-      </div>
+${crCamps.length===0?`<div class="card" style="padding:40px;text-align:center;border:1px dashed var(--bdr)">
+  <div style="font-size:32px;margin-bottom:12px">🎬</div>
+  <div style="font-size:14px;font-weight:700;margin-bottom:8px">No campaigns yet</div>
+  <div style="font-size:11px;color:var(--tx2);margin-bottom:16px">Create campaigns in the Creator Dashboard — they sync here automatically</div>
+  <a href="https://creator-dashboard-v4xe.onrender.com" target="_blank" class="btn" style="text-decoration:none">Open Creator Dashboard ↗</a>
+</div>`:crCamps.map(cc=>{
+  const posts=getCreatorPosts(cc.id);
+  const livePosts=posts.filter(p=>p.status==="live");
+  const approvedPosts=posts.filter(p=>p.status==="approved");
+  const draftPosts=posts.filter(p=>p.status==="draft"||p.status==="review");
+  const totalViews=posts.reduce((a,p)=>a+Number(p.views||0),0);
+  const totalLikes=posts.reduce((a,p)=>a+Number(p.likes||0),0);
+  const totalBudget=posts.reduce((a,p)=>a+Number(p.budget||0),0);
+  const emv=totalViews*0.008;
+  const ttSounds=(cc.ttUrl||"").split("\n").filter(Boolean);
+  const postCardsHtml=posts.slice(0,8).map(p=>buildCreatorPostCard(p,cc.id)).join("")+
+    (posts.length>8?`<div style="width:100px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;cursor:pointer" onclick="window.open('https://creator-dashboard-v4xe.onrender.com/#/campaign/${cc.id}','_blank')"><div style="text-align:center"><div style="font-size:18px;color:var(--tx2)">+${posts.length-8}</div><div style="font-size:9px;color:var(--tx3)">more</div></div></div>`:"");
+  return `<div class="card" style="margin-bottom:11px;border-left:3px solid #a855f7">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;flex-wrap:wrap;gap:8px">
+    <div>
+      <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--gold)">${cc.name}</div>
+      <div style="font-size:10px;color:var(--tx2);margin-top:2px">${cc.artist||"Alicia Keys"}${cc.createdAt?" · "+new Date(cc.createdAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):""}</div>
+      ${cc.desc?`<div style="font-size:10px;color:var(--tx3);margin-top:3px">${cc.desc}</div>`:""}
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      <button class="btno bsm" onclick="go('crm')" style="font-size:9px">✦ Creators</button>
-      <button class="btno bsm" onclick="go('budget')" style="font-size:9px">💰 Budget</button>
-      <button class="btno bsm" onclick="go('calendar')" style="font-size:9px">📅 Calendar</button>
-      <button onclick="deleteCampaign(${ci})" style="background:none;border:1px solid #f09a9a22;color:#f09a9a;cursor:pointer;padding:3px 8px;border-radius:5px;font-size:9px">Remove</button>
+      ${ttSounds.length?`<a href="${ttSounds[0]}" target="_blank" class="btno bsm" style="font-size:9px;text-decoration:none">♪ TikTok${ttSounds.length>1?" ("+ttSounds.length+")":""} ↗</a>`:""}
+      ${cc.igUrl?`<a href="${cc.igUrl}" target="_blank" class="btno bsm" style="font-size:9px;text-decoration:none">📸 IG ↗</a>`:""}
+      ${cc.spUrl?`<a href="${cc.spUrl}" target="_blank" class="btno bsm" style="font-size:9px;text-decoration:none">♫ Spotify ↗</a>`:""}
+      ${cc.cxUrl?`<a href="${cc.cxUrl}" target="_blank" class="btno bsm" style="font-size:9px;text-decoration:none">⚡ ChartEx ↗</a>`:""}
+      <a href="https://creator-dashboard-v4xe.onrender.com/#/campaign/${cc.id}" target="_blank" class="btn bsm" style="text-decoration:none;font-size:9px">Open ↗</a>
     </div>
   </div>
-  <div class="g2" style="margin-bottom:8px">
-    <div>
-      <div class="cl" style="margin-bottom:4px">Goal</div>
-      <input class="ec" value="${c.goal}" style="font-size:10px" onchange="CAMPAIGNS_DATA[${ci}].goal=this.value;saveCampaignsLocal()">
-    </div>
-    <div>
-      <div class="cl" style="margin-bottom:4px">Platforms</div>
-      <input class="ec" value="${c.platforms.join(", ")}" style="font-size:10px" onchange="CAMPAIGNS_DATA[${ci}].platforms=this.value.split(',').map(x=>x.trim());saveCampaignsLocal()">
-    </div>
+  <div class="g4" style="margin-bottom:11px">
+    ${kpi("Posts",posts.length,livePosts.length+" live","#a855f7",null)}
+    ${kpi("Views",fmt2(totalViews),"creator posts","var(--gold)",null)}
+    ${kpi("Budget","$"+totalBudget.toLocaleString(),"creator rates","#c8a96e",null)}
+    ${kpi("Est. EMV","$"+fmt2(emv),"@$8 CPM","#a8f0c8",null)}
   </div>
-  <div class="g4" style="margin-bottom:8px">
-    <div>
-      <div class="cl" style="margin-bottom:3px">Budget</div>
-      <input class="ec" value="${c.budget}" type="number" style="font-family:'Playfair Display',serif;font-size:16px;color:#c8a96e" onchange="CAMPAIGNS_DATA[${ci}].budget=parseFloat(this.value)||0;saveCampaignsLocal()">
-    </div>
-    <div>
-      <div class="cl" style="margin-bottom:3px">Spent</div>
-      <input class="ec" value="${c.spent}" type="number" style="font-family:'Playfair Display',serif;font-size:16px;color:#a8f0c8" onchange="CAMPAIGNS_DATA[${ci}].spent=parseFloat(this.value)||0;saveCampaignsLocal()">
-    </div>
-    <div>
-      <div class="cl" style="margin-bottom:3px">TikTok Sound Page</div>
-      <input class="ec" value="${c.sound||""}" placeholder="Sound name…" style="font-size:10px" onchange="CAMPAIGNS_DATA[${ci}].sound=this.value;saveCampaignsLocal()">
-    </div>
-    <div>
-      <div class="cl" style="margin-bottom:3px">Instagram Sound Page</div>
-      <input class="ec" value="${c.igSound||""}" placeholder="IG sound URL…" style="font-size:10px" onchange="CAMPAIGNS_DATA[${ci}].igSound=this.value;saveCampaignsLocal()">
-    </div>
+  <div style="display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap">
+    ${[["🟣 Live",livePosts.length,"#a855f7"],["✓ Approved",approvedPosts.length,"#4caf50"],["⏳ Pending",draftPosts.length,"#f0c040"]].map(([l,v,c])=>`<div style="padding:6px 12px;background:${c}11;border:1px solid ${c}33;border-radius:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:${c}">${v}</div><div style="font-size:9px;color:${c};font-weight:700">${l}</div></div>`).join("")}
   </div>
-  <!-- Live budget bar -->
-  <div style="margin-bottom:8px;padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--bdr)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <div style="font-size:9px;color:var(--tx2);font-family:'Syne',sans-serif;text-transform:uppercase;letter-spacing:.1em;font-weight:700">Budget Used</div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <span style="font-size:11px;color:#a8f0c8;font-family:'Playfair Display',serif">$${c.spent.toLocaleString()} spent</span>
-        <span style="font-size:11px;color:var(--tx2);font-family:'Playfair Display',serif">of <input class="ec" value="${c.budget.toLocaleString()}" style="font-family:'Playfair Display',serif;font-size:11px;width:72px;color:var(--purple);display:inline" oninput="updateCampBudget('${c.id}',this.value)" title="Click to edit total budget"></span>
-        <span style="font-size:10px;font-weight:700;color:${c.budget>0&&(c.spent/c.budget)>0.8?'#f09a9a':'#a8f0c8'}">${c.budget>0?Math.round(c.spent/c.budget*100):0}%</span>
-      </div>
-    </div>
-    <div style="height:6px;background:var(--dim);border-radius:4px;overflow:hidden">
-      <div style="width:${c.budget>0?Math.min(Math.round(c.spent/c.budget*100),100):0}%;height:100%;background:${c.budget>0&&(c.spent/c.budget)>0.8?'#f09a9a':'var(--purple)'};border-radius:4px;transition:width .5s"></div>
-    </div>
-    <div style="font-size:9px;color:var(--tx3);margin-top:5px">$${(c.budget-c.spent).toLocaleString()} remaining · <button onclick="go('budget')" style="background:none;border:none;color:var(--purple);cursor:pointer;font-size:9px;font-family:'Syne',sans-serif;font-weight:700;padding:0;text-decoration:underline">View Budget Tracker →</button></div>
-  </div>
-  <div class="g4" style="margin-bottom:8px">
-    ${Object.entries(c.kpis).map(([k,v])=>`<div style="background:${c.color}0a;border:1px solid ${c.color}22;border-radius:7px;padding:8px">
-      <div style="font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:${c.color};font-weight:700;font-family:'Syne',sans-serif;margin-bottom:3px">${k}</div>
-      <div style="font-family:'Playfair Display',serif;font-size:16px;color:var(--tx)">${v}</div></div>`).join("")}
-  </div>
-  <div style="margin-bottom:8px">
-    <div class="cl" style="margin-bottom:4px">Creators <button class="btno bsm" style="font-size:8px;margin-left:6px" onclick="go('crm')">+ Add in CRM</button></div>
-    <div style="display:flex;gap:5px;flex-wrap:wrap">${c.creators.map(cr=>`<span style="padding:3px 9px;background:var(--bg3);border:1px solid var(--bdr);border-radius:5px;font-size:10px;color:#69C9D0;font-family:'Syne',sans-serif">${cr}</span>`).join("")}</div>
-  </div>
-  <div style="margin-bottom:8px">
-    <div class="cl" style="margin-bottom:4px">Notes</div>
-    <textarea class="ec" style="min-height:40px;resize:vertical;font-size:10px" onchange="CAMPAIGNS_DATA[${ci}].notes=this.value;saveCampaignsLocal()">${c.notes||""}</textarea>
-  </div>
-  <div style="display:flex;gap:5px;flex-wrap:wrap">
-    ${c.links.map(lk=>`<a href="${lk.u}" target="_blank" class="dl" style="color:${lk.c}">${lk.l} ↗</a>`).join("")}
-    <a href="https://www.canva.com/design/new?type=instagramPost" target="_blank" class="dl" style="color:#c8a96e">🎨 Canva</a>
-  </div>
-</div>`).join("")}`;
+  ${posts.length?`<div style="overflow-x:auto"><div style="display:flex;gap:10px;padding-bottom:8px;min-width:max-content">${postCardsHtml}</div></div>`:""}
+</div>`;
+}).join("")}
+${buildDataInputSection("campaigns","Campaign Manager")}`;
 }
-window.deleteCampaign=i=>{
-  if(!confirm("Remove this campaign?"))return;
-  CAMPAIGNS_DATA.splice(i,1);saveCampaignsLocal();renderPage();
-};
-window.openAddCampaign=()=>{
-  document.getElementById("mroot").innerHTML=`
-  <div class="modal-bg" id="modal-overlay">
-    <div class="modal">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div style="font-family:'Playfair Display',serif;font-size:18px">New Campaign</div>
-        <button onclick="closeModal()" style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:20px">×</button>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:9px">
-        <input class="inp" id="nc-name" placeholder="Campaign name">
-        <input class="inp" id="nc-goal" placeholder="Goal">
-        <div style="display:flex;gap:8px">
-          <input class="inp" id="nc-budget" placeholder="Budget $" type="number" style="flex:1">
-          <input class="inp" id="nc-start" placeholder="Start (e.g. coming soon)" style="flex:1">
-          <input class="inp" id="nc-end" placeholder="End (e.g. Apr 30)" style="flex:1">
-        </div>
-        <input class="inp" id="nc-platforms" placeholder="Platforms (e.g. TikTok, Instagram)">
-        <input class="inp" id="nc-sound" placeholder="TikTok sound name">
-        <input class="inp" id="nc-igsound" placeholder="Instagram sound page URL">
-        <select class="inp" id="nc-status"><option value="planning">Planning</option><option value="active">Active</option><option value="draft review">Draft Review</option></select>
-        <textarea class="inp" id="nc-notes" placeholder="Notes…" style="min-height:50px"></textarea>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:14px">
-        <button class="btn" onclick="addCampaign()">Create Campaign</button>
-        <button class="btno" onclick="closeModal()">Cancel</button>
-      </div>
-    </div>
-  </div>`;
-  document.getElementById("modal-overlay").onclick=e=>{if(e.target.id==="modal-overlay")closeModal()};
-};
-window.addCampaign=()=>{
-  const camp={
-    id:"c"+Date.now(),
-    name:document.getElementById("nc-name").value||"New Campaign",
-    color:"#c8a96e",
-    status:document.getElementById("nc-status").value||"planning",
-    goal:document.getElementById("nc-goal").value||"",
-    start:document.getElementById("nc-start").value||"",
-    end:document.getElementById("nc-end").value||"",
-    budget:parseFloat(document.getElementById("nc-budget").value)||0,
-    spent:0,
-    creators:[],
-    platforms:document.getElementById("nc-platforms").value.split(",").map(x=>x.trim()).filter(Boolean),
-    sound:document.getElementById("nc-sound").value||"",
-    igSound:document.getElementById("nc-igsound").value||"",
-    kpis:{Reach:"–",Creates:"–",Views:"–",Sentiment:"–"},
-    links:[],
-    notes:document.getElementById("nc-notes").value||"",
-  };
-  CAMPAIGNS_DATA.push(camp);saveCampaignsLocal();closeModal();renderPage();
-};
 
-// ═══ CREATOR CRM ═══
-let crmData=[
-  {id:"cr1",n:"Jade Elia",h:"@jadeelia",url:"https://www.tiktok.com/@jadeelia",plat:"TikTok",fol:"3.2M",eng:"4.8%",fee:"$8,500",st:"contracted",camp:"Con Cora Gala Momentum",agent:"",agentEmail:"",turnaround:"5 days",notes:"Draft due Apr 18."},
-  {id:"cr2",n:"DeeJ Music",h:"@deejmusic_",url:"https://www.tiktok.com/@deejmusic_",plat:"TikTok",fol:"670K",eng:"5.2%",fee:"$1,400",st:"contracted",camp:"Con Cora Gala Momentum",agent:"",agentEmail:"",turnaround:"5 days",notes:"Draft due Apr 18."},
-  {id:"cr3",n:"Marcus Flow",h:"@marcusflow",url:"https://youtube.com/@marcusflow",plat:"YouTube",fol:"1.8M",eng:"3.1%",fee:"$4,200",st:"negotiating",camp:"Plentiful — Cross-Platform Push",agent:"Creative Artists Agency",agentEmail:"",turnaround:"10 days",notes:"Awaiting signed brief."},
-  {id:"cr4",n:"Priya Sounds",h:"@priyasounds",url:"https://instagram.com/priyasounds",plat:"Instagram",fol:"960K",eng:"4.4%",fee:"$2,100",st:"outreach sent",camp:"Plentiful — Cross-Platform Push",agent:"",agentEmail:"",turnaround:"7 days",notes:"Follow up Apr 10."},
-  {id:"cr5",n:"Anika Creates",h:"@anikacreates",url:"https://www.tiktok.com/@anikacreates",plat:"TikTok",fol:"420K",eng:"6.1%",fee:"$900",st:"draft review",camp:"Hell's Kitchen Broadway Wave",agent:"",agentEmail:"",turnaround:"5 days",notes:"Draft submitted."},
-];
-const CRM_SC={contracted:"#a8f0c8",negotiating:"#f0e68c","outreach sent":"#69C9D0","draft review":"#c8a96e",approved:"#a8f0c8"};
-function saveCRMLocal(){localStorage.setItem("wm_crm",JSON.stringify(crmData));}
-(()=>{const d=localStorage.getItem("wm_crm");if(d){try{crmData=JSON.parse(d);}catch{}}})();
 
 function pgCRM(){
   // Pull active creators from creator dashboard
@@ -2629,10 +2645,10 @@ function pgCalendar(){return`
     <div class="cl" style="margin-bottom:0;color:var(--purple)">📅 Creator Post Deliverables — from Creator Dashboard</div>
     <a href="https://creator-dashboard-v4xe.onrender.com" target="_blank" class="btno bsm" style="text-decoration:none;font-size:9px">Open Dashboard ↗</a>
   </div>
-  ${buildCreatorDeliverables()}}
+  ${buildCreatorDeliverables()}
 </div>
 
-buildDataInputSection("calendar","Calendar & Canva")}
+${buildDataInputSection("calendar","Calendar & Canva")}
 
 <div class="card" style="margin-bottom:11px;border-left:3px solid var(--purple)">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
@@ -3626,6 +3642,15 @@ function pgViral(){
   <div id="viral-db">
     ${viralDB.length===0?`<div style="text-align:center;padding:20px"><div style="font-size:24px;margin-bottom:8px">🔬</div><div style="font-size:12px;color:var(--tx2)">Analyze posts above to build your formula database</div></div>`:renderViralDB()}
   </div>
+</div>
+<div class="card" style="margin-top:14px">
+  <div class="cl" style="color:#69C9D0;margin-bottom:8px">⬇️ TikTok Download — No Watermark <span class="bge" style="background:#69C9D014;color:#69C9D0;border:1px solid #69C9D028">Scraptik API</span></div>
+  <div style="font-size:10px;color:var(--tx2);margin-bottom:10px">Paste any TikTok URL → download video without watermark for internal use only</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+    <input class="inp" id="nwm-url" placeholder="https://www.tiktok.com/@handle/video/..." style="flex:1">
+    <button class="btn" onclick="downloadNoWatermark()">⬇️ Get Link</button>
+  </div>
+  <div id="nwm-result"></div>
 </div>
 ${buildDataInputSection("viral","Viral Analyzer")}`;
 }

@@ -568,26 +568,38 @@ app.delete('/airtable/:table/:id', async (req, res) => {
 });
 
 // ════════════════════════════════════════════════════════════
-// ANTHROPIC — Hey Jessi
+// ANTHROPIC — Hey Jessi (raw fetch, no SDK dependency)
 // ════════════════════════════════════════════════════════════
-const Anthropic = require('@anthropic-ai/sdk');
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 app.post('/ai/chat', async (req, res) => {
   const { messages, system } = req.body;
   if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: 'messages array required' });
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(503).json({ error: 'ANTHROPIC_API_KEY not set in Render env vars' });
   const sysPrompt = system || `You are Hey Jessi, the AI intelligence partner for Alicia Keys at Wirehouse Media.
-You know AK's full catalog, streaming performance, TikTok sound analytics, campaign data (Con Cora Gala x Karol G, Plentiful ft. Pusha T, Hell's Kitchen Broadway), creator CRM, budget tracking, and social listening.
+You know AK's full catalog, streaming performance, TikTok sound analytics, campaign data, creator CRM, budget tracking, and social listening.
 Be specific, data-driven, and actionable. Use real numbers from the conversation context.
 Key facts: Spotify 36.6M monthly listeners, Instagram 28M followers, TikTok 8M followers, Girl on Fire 1.7M creates, Try Sleeping 4370+ creates from Con Cora Gala campaign.`;
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-opus-4-5-20251101',
-      max_tokens: 2048,
-      system: sysPrompt,
-      messages: messages.map(m => ({ role: m.role, content: m.content }))
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5-20251101',
+        max_tokens: 2048,
+        system: sysPrompt,
+        messages: messages.map(m => ({ role: m.role, content: m.content }))
+      })
     });
-    res.json({ reply: response.content[0]?.text || '' });
+    if (!r.ok) {
+      const err = await r.text();
+      return res.status(r.status).json({ error: err.substring(0, 300) });
+    }
+    const d = await r.json();
+    res.json({ reply: d.content?.[0]?.text || '' });
   } catch (e) {
     console.error('[AI]', e.message);
     res.status(500).json({ error: e.message });

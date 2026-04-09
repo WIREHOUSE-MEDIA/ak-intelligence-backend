@@ -182,6 +182,398 @@ const ST={contracted:"#a8f0c8",approved:"#a8f0c8",active:"#a8f0c8","draft review
 const TC={owned:"#c8a96e",influencer:"#69C9D0",dsp:"#1DB954",pr:"#E1306C",paid:"#9b59b6",report:"#888"};
 const PC={News:"#c8a96e",TikTok:"#69C9D0",Reddit:"#FF4500",Blogs:"#a8f0c8",LinkedIn:"#1877F2",YouTube:"#FF0000",Instagram:"#E1306C",Quora:"#A82400"};
 const fmt=n=>{if(!n&&n!==0)return"–";n=parseInt(n);return n>=1e9?(n/1e9).toFixed(1)+"B":n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e3?Math.round(n/1e3)+"K":String(n)};
+
+// ═══ DATA INPUT SECTION — universal component for all tabs ═══
+// Each tab gets this at the bottom: text, file upload, screenshot, voice, Jessi data
+window._dataSections = JSON.parse(localStorage.getItem('wm_data_sections')||'{}');
+window._dataImgs = {};
+
+function buildDataInputSection(tabId, tabName){
+  const sections = (window._dataSections[tabId]||[]);
+  const sHtml = sections.length ? sections.map((s,i)=>buildDataSectionCard(s,tabId,i)).join("") : 
+    `<div style="font-size:10px;color:var(--tx3);padding:14px;text-align:center;line-height:2">No sections yet — add data below</div>`;
+  return `
+<div style="margin-top:22px;border-top:1px solid var(--bdr);padding-top:18px" id="data-section-wrap-${tabId}">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div>
+      <div style="font-family:'Syne',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--purple)">+ Data Sections</div>
+      <div style="font-size:9px;color:var(--tx3);margin-top:2px">Add data from Hey Jessi, text, screenshots, files, or voice — auto-generates a themed section</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btno bsm" style="font-size:9px" onclick="openDataInput('${tabId}','${tabName}')">+ Add Section</button>
+      <select class="inp" style="font-size:9px;height:28px;padding:2px 8px" onchange="importDataFromTab(this.value,'${tabId}')" title="Import a section from another tab">
+        <option value="">⊕ Import from tab…</option>
+        ${["overview","platforms","dsp","catalogue","campaignreport","viral","listening","ai","campaigns","crm","budget","calendar","drafts"].map(t=>`<option value="${t}">${t}</option>`).join("")}
+      </select>
+    </div>
+  </div>
+  <div id="data-sections-${tabId}">${sHtml}</div>
+</div>`;
+}
+
+function buildDataSectionCard(s, tabId, idx){
+  const colors = {"text":"var(--purple)","jessi":"var(--gold)","screenshot":"#69C9D0","file":"#1DB954","voice":"#E1306C","imported":"#9b59b6"};
+  const icons = {"text":"✏️","jessi":"✦","screenshot":"📷","file":"📄","voice":"🎙","imported":"⊕"};
+  const c = colors[s.type]||"var(--purple)";
+  const ico = icons[s.type]||"◈";
+  return `
+<div id="ds-${tabId}-${idx}" style="background:var(--bg3);border:1px solid var(--bdr);border-left:3px solid ${c};border-radius:10px;padding:13px 15px;margin-bottom:9px;position:relative">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <span style="font-size:13px">${ico}</span>
+    <input value="${s.title||"Section"}" onchange="updateDataSection('${tabId}',${idx},'title',this.value)"
+      style="background:none;border:none;border-bottom:1px solid ${c}33;color:${c};font-family:'Syne',sans-serif;font-weight:700;font-size:11px;flex:1;outline:none;padding:2px 0">
+    <span style="font-size:9px;color:var(--tx3)">${s.date||""}</span>
+    <button onclick="moveDataSection('${tabId}',${idx},-1)" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:12px;padding:0 3px" title="Move up">↑</button>
+    <button onclick="moveDataSection('${tabId}',${idx},1)" style="background:none;border:none;color:var(--tx3);cursor:pointer;font-size:12px;padding:0 3px" title="Move down">↓</button>
+    <button onclick="deleteDataSection('${tabId}',${idx})" style="background:none;border:none;color:#f09a9a;cursor:pointer;font-size:16px;padding:0;line-height:1">×</button>
+  </div>
+  ${s.img ? `<img src="${s.img}" style="max-height:120px;border-radius:7px;border:1px solid var(--bdr);object-fit:cover;margin-bottom:8px;cursor:pointer" onclick="window.open(this.src)" onerror="this.style.display='none'">` : ""}
+  <textarea onchange="updateDataSection('${tabId}',${idx},'text',this.value)"
+    style="width:100%;min-height:50px;background:var(--bg2);border:1px solid var(--bdr);border-radius:7px;padding:8px 10px;font-size:10px;color:var(--tx);font-family:'DM Mono',monospace;resize:vertical;line-height:1.8;box-sizing:border-box;outline:none"
+  >${(s.text||"").replace(/</g,"&lt;")}</textarea>
+  <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
+    <button onclick="sendSectionToJessi('${tabId}',${idx})" class="btno bsm" style="font-size:8px">✦ Send to Jessi</button>
+    <button onclick="sendSectionToDrive('${tabId}',${idx})" class="btno bsm" style="font-size:8px">📄 To Doc</button>
+    <button onclick="copySection('${tabId}',${idx})" class="btno bsm" style="font-size:8px">📋 Copy</button>
+  </div>
+</div>`;
+}
+
+window.openDataInput = (tabId, tabName) => {
+  document.getElementById("mroot").innerHTML = `
+  <div class="modal-bg" id="modal-overlay">
+    <div class="modal" style="max-width:560px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-family:'Playfair Display',serif;font-size:17px">+ Add Section to ${tabName}</div>
+        <button onclick="closeModal()" style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:22px">×</button>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        ${[["✏️ Text","text"],["✦ From Jessi","jessi"],["📷 Screenshot","screenshot"],["📄 File","file"],["🎙 Voice","voice"]].map(([l,v])=>`<button class="chip" onclick="setDataInputType('${v}','${tabId}','${tabName}')">${l}</button>`).join("")}
+      </div>
+      <div id="data-input-form">
+        <input class="inp" id="ds-title" placeholder="Section title (e.g. Sony DSRP Apr 5, Con Cora Week 2)" style="margin-bottom:9px">
+        <textarea class="inp" id="ds-text" placeholder="Paste data, notes, or any text — Jessi can analyze it…" style="min-height:100px;margin-bottom:9px"></textarea>
+        <div style="display:flex;gap:7px">
+          <button class="btn" onclick="saveDataSection('${tabId}','text')">Add Section</button>
+          <button class="btno" onclick="saveDataSection('${tabId}','text',true)">Add + Analyze with Jessi</button>
+          <button onclick="closeModal()" class="btno">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById("modal-overlay").onclick=e=>{if(e.target.id==="modal-overlay")closeModal()};
+  setTimeout(()=>document.getElementById("ds-title")?.focus(),100);
+};
+
+window.setDataInputType = (type, tabId, tabName) => {
+  const form = document.getElementById("data-input-form");
+  if(!form) return;
+  if(type === "screenshot"){
+    form.innerHTML = `
+      <input class="inp" id="ds-title" placeholder="Section title" style="margin-bottom:9px">
+      <label style="display:block;margin-bottom:9px;padding:20px;border:1px dashed var(--bdr);border-radius:9px;cursor:pointer;text-align:center;color:var(--tx2)">
+        📷 Click to upload screenshot(s) — Jessi will read them
+        <input type="file" accept="image/*" multiple style="display:none" onchange="handleDataImgUpload(this,'${tabId}')">
+      </label>
+      <div id="ds-img-prev" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px"></div>
+      <div style="display:flex;gap:7px">
+        <button class="btn" onclick="saveDataSection('${tabId}','screenshot')">Add Section</button>
+        <button class="btno" onclick="saveDataSection('${tabId}','screenshot',true)">Add + Analyze</button>
+        <button onclick="closeModal()" class="btno">Cancel</button>
+      </div>`;
+  } else if(type === "jessi"){
+    // Pull from recent Jessi messages
+    const recent = typeof aiHist!=="undefined" ? aiHist.slice(-6) : [];
+    form.innerHTML = `
+      <input class="inp" id="ds-title" placeholder="Section title" style="margin-bottom:9px">
+      ${recent.length ? `<div style="margin-bottom:9px">
+        <div class="cl" style="margin-bottom:5px">Recent Jessi responses</div>
+        ${recent.filter(m=>m.role==="assistant").slice(-3).map((m,i)=>`
+        <div onclick="document.getElementById('ds-text').value=this.querySelector('.jtext').textContent" 
+          style="padding:8px 11px;background:var(--bg3);border:1px solid var(--bdr);border-radius:7px;cursor:pointer;margin-bottom:5px">
+          <div class="jtext" style="font-size:10px;color:var(--tx2);line-height:1.6;max-height:50px;overflow:hidden">${m.content.substring(0,200)}…</div>
+          <div style="font-size:9px;color:var(--purple);margin-top:3px">Click to use this →</div>
+        </div>`).join("")}
+      </div>` : ""}
+      <textarea class="inp" id="ds-text" placeholder="Or paste Jessi output here…" style="min-height:80px;margin-bottom:9px"></textarea>
+      <div style="display:flex;gap:7px">
+        <button class="btn" onclick="saveDataSection('${tabId}','jessi')">Add Section</button>
+        <button onclick="closeModal()" class="btno">Cancel</button>
+      </div>`;
+  } else if(type === "voice"){
+    form.innerHTML = `
+      <input class="inp" id="ds-title" placeholder="Section title" style="margin-bottom:9px">
+      <div style="text-align:center;margin-bottom:12px">
+        <button id="voice-rec-btn" onclick="toggleVoiceRec('${tabId}')" class="btn">🔴 Start Recording</button>
+        <div id="voice-status" style="font-size:10px;color:var(--tx2);margin-top:6px">Press to record</div>
+      </div>
+      <textarea class="inp" id="ds-text" placeholder="Transcription will appear here, or type notes…" style="min-height:60px;margin-bottom:9px"></textarea>
+      <div style="display:flex;gap:7px">
+        <button class="btn" onclick="saveDataSection('${tabId}','voice')">Add Section</button>
+        <button onclick="closeModal()" class="btno">Cancel</button>
+      </div>`;
+  } else {
+    document.querySelectorAll(".chip").forEach(c=>{c.classList.toggle("on",c.textContent.toLowerCase().includes(type))});
+  }
+};
+
+window._voiceRec = null;
+window._voiceChunks = [];
+window.toggleVoiceRec = async(tabId)=>{
+  const btn = document.getElementById("voice-rec-btn");
+  const status = document.getElementById("voice-status");
+  if(!window._voiceRec){
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      window._voiceRec = new MediaRecorder(stream);
+      window._voiceChunks = [];
+      window._voiceRec.ondataavailable = e=>window._voiceChunks.push(e.data);
+      window._voiceRec.onstop = ()=>{
+        const blob = new Blob(window._voiceChunks,{type:"audio/webm"});
+        const url = URL.createObjectURL(blob);
+        const ta = document.getElementById("ds-text");
+        if(ta) ta.value = "[Voice recording attached — "+Math.round(blob.size/1024)+"KB — send to Jessi to transcribe]";
+        stream.getTracks().forEach(t=>t.stop());
+        if(btn){btn.textContent="🔴 Start Recording";btn.style.background="";}
+        if(status) status.textContent="Recording saved";
+      };
+      window._voiceRec.start();
+      if(btn){btn.textContent="⏹ Stop";btn.style.background="#E1306C";}
+      if(status) status.textContent="Recording… click to stop";
+    }catch(e){if(status)status.textContent="Mic access needed";}
+  } else {
+    window._voiceRec.stop(); window._voiceRec=null;
+  }
+};
+
+window.handleDataImgUpload = (input, tabId)=>{
+  if(!window._dataImgs[tabId]) window._dataImgs[tabId]=[];
+  const prev = document.getElementById("ds-img-prev");
+  Array.from(input.files).forEach(file=>{
+    const r=new FileReader();
+    r.onload=e=>{
+      window._dataImgs[tabId].push(e.target.result);
+      if(prev){const d=document.createElement("div");d.innerHTML=`<img src="${e.target.result}" style="height:65px;border-radius:6px;border:1px solid var(--bdr);object-fit:cover">`;prev.appendChild(d);}
+    };
+    r.readAsDataURL(file);
+  });
+  input.value="";
+};
+
+window.saveDataSection = (tabId, type, withJessi=false)=>{
+  const title = document.getElementById("ds-title")?.value?.trim()||"Section";
+  const text  = document.getElementById("ds-text")?.value?.trim()||"";
+  const imgs  = window._dataImgs[tabId]||[];
+  if(!title&&!text&&!imgs.length) return;
+  if(!window._dataSections[tabId]) window._dataSections[tabId]=[];
+  const entry = {id:Date.now(),type,title,text,img:imgs[0]||null,date:new Date().toLocaleDateString(),tabId};
+  window._dataSections[tabId].push(entry);
+  localStorage.setItem("wm_data_sections",JSON.stringify(window._dataSections));
+  window._dataImgs[tabId]=[];
+  closeModal();
+  renderPage();
+  if(withJessi){
+    setTimeout(()=>{
+      go("ai");
+      setTimeout(()=>{
+        const inp=document.getElementById("ai-inp");
+        if(inp){
+          if(imgs.length && typeof jessiImages!=="undefined") jessiImages=imgs.map((d,i)=>({type:"image/jpeg",data:d.split(",")[1],name:"section-"+i+".jpg"}));
+          inp.value=`Analyze this data section "${title}" and give me key insights, action items, and a structured summary:\n\n${text}`;
+          if(typeof aiSend==="function") setTimeout(aiSend,100);
+        }
+      },300);
+    },200);
+  }
+};
+
+window.updateDataSection = (tabId, idx, field, val)=>{
+  if(window._dataSections[tabId]?.[idx]) window._dataSections[tabId][idx][field]=val;
+  localStorage.setItem("wm_data_sections",JSON.stringify(window._dataSections));
+};
+
+window.deleteDataSection = (tabId, idx)=>{
+  window._dataSections[tabId]?.splice(idx,1);
+  localStorage.setItem("wm_data_sections",JSON.stringify(window._dataSections));
+  const el=document.getElementById(`ds-${tabId}-${idx}`);
+  if(el) el.style.display="none";
+};
+
+window.moveDataSection = (tabId, idx, dir)=>{
+  const arr=window._dataSections[tabId];
+  if(!arr) return;
+  const newIdx=idx+dir;
+  if(newIdx<0||newIdx>=arr.length) return;
+  [arr[idx],arr[newIdx]]=[arr[newIdx],arr[idx]];
+  localStorage.setItem("wm_data_sections",JSON.stringify(window._dataSections));
+  renderPage();
+};
+
+window.importDataFromTab = (fromTab, toTab)=>{
+  if(!fromTab||fromTab===toTab) return;
+  const sections = window._dataSections[fromTab]||[];
+  if(!sections.length){if(typeof showGDriveToast==="function")showGDriveToast("No sections in "+fromTab+" tab");return;}
+  document.getElementById("mroot").innerHTML=`
+  <div class="modal-bg" id="modal-overlay">
+    <div class="modal" style="max-width:500px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-family:'Playfair Display',serif;font-size:17px">Import from ${fromTab}</div>
+        <button onclick="closeModal()" style="background:none;border:none;color:var(--tx2);cursor:pointer;font-size:22px">×</button>
+      </div>
+      ${sections.map((s,i)=>`
+      <div onclick="doImportSection('${fromTab}',${i},'${toTab}')" style="padding:9px 12px;border:1px solid var(--bdr);border-radius:8px;cursor:pointer;margin-bottom:7px">
+        <div style="font-size:11px;font-weight:700;color:var(--purple)">${s.title}</div>
+        <div style="font-size:10px;color:var(--tx2)">${s.date} · ${s.type}</div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:3px">${(s.text||"").substring(0,80)}…</div>
+      </div>`).join("")}
+    </div>
+  </div>`;
+  document.getElementById("modal-overlay").onclick=e=>{if(e.target.id==="modal-overlay")closeModal()};
+};
+
+window.doImportSection = (fromTab, idx, toTab)=>{
+  const s={...window._dataSections[fromTab]?.[idx], type:"imported", tabId:toTab, id:Date.now()};
+  if(!window._dataSections[toTab]) window._dataSections[toTab]=[];
+  window._dataSections[toTab].push(s);
+  localStorage.setItem("wm_data_sections",JSON.stringify(window._dataSections));
+  closeModal();
+  renderPage();
+  if(typeof showGDriveToast==="function") showGDriveToast("Section imported ✓");
+};
+
+window.sendSectionToJessi = (tabId, idx)=>{
+  const s=window._dataSections[tabId]?.[idx];if(!s)return;
+  go("ai");
+  setTimeout(()=>{
+    if(s.img&&typeof jessiImages!=="undefined") jessiImages=[{type:"image/jpeg",data:s.img.split(",")[1],name:"section.jpg"}];
+    const inp=document.getElementById("ai-inp");
+    if(inp){inp.value=`Analyze this data section: "${s.title}"\n\n${s.text}`;if(typeof aiSend==="function")setTimeout(aiSend,100);}
+  },300);
+};
+
+window.sendSectionToDrive = (tabId, idx)=>{
+  const s=window._dataSections[tabId]?.[idx];if(!s)return;
+  if(typeof saveToGoogleDoc==="function") saveToGoogleDoc(s.title,s.text);
+};
+
+window.copySection = (tabId, idx)=>{
+  const s=window._dataSections[tabId]?.[idx];if(!s)return;
+  navigator.clipboard?.writeText(s.title+"\n\n"+s.text);
+  if(typeof showGDriveToast==="function") showGDriveToast("Section copied ✓");
+};
+
+// ═══ CREATOR DASHBOARD INTEGRATION ═══
+window._creatorData = null;
+window.loadCreatorData = async()=>{
+  try{
+    const r=await fetch("/jb/creator");
+    if(!r.ok) return null;
+    window._creatorData=await r.json();
+    return window._creatorData;
+  }catch(e){console.warn("[Creator]",e.message);return null;}
+};
+
+// Load on startup
+window.addEventListener("load",async()=>{
+  window._creatorData=await window.loadCreatorData();
+});
+
+function getCreatorCampaigns(){return window._creatorData?.campaigns||[];}
+function getCreatorPosts(campId){return ((window._creatorData?.posts)||{})[campId]||[];}
+function getAllCreatorPosts(){
+  const posts=window._creatorData?.posts||{};
+  return Object.values(posts).flat().filter(Boolean);
+}
+function getActivePosts(){return getAllCreatorPosts().filter(p=>p.status==="live"||p.status==="approved");}
+function getDraftPosts(){return getAllCreatorPosts().filter(p=>p.status==="draft"||p.status==="review");}
+function getLivePosts(){return getAllCreatorPosts().filter(p=>p.status==="live");}
+function getPendingPosts(){return getAllCreatorPosts().filter(p=>p.status==="review"||p.status==="draft");}
+
+function buildCreatorSummaryPanel(){
+  const camps=getCreatorCampaigns();
+  const allPosts=getAllCreatorPosts();
+  const livePosts=allPosts.filter(p=>p.status==="live");
+  const totalViews=allPosts.reduce((a,p)=>a+Number(p.views||0),0);
+  const totalBudget=allPosts.reduce((a,p)=>a+Number(p.budget||0),0);
+  if(!camps.length) return`<div class="card" style="margin-bottom:11px;border:1px dashed var(--purple)33">
+    <div class="cl" style="color:var(--purple)">🔗 Creator Dashboard</div>
+    <div style="font-size:10px;color:var(--tx2);line-height:2;margin-top:4px">
+      No creator campaigns loaded. Make sure CREATOR_JSONBIN_BIN is set in Render env vars.<br>
+      <a href="https://creator-dashboard-v4xe.onrender.com" target="_blank" style="color:var(--purple)">Open Creator Dashboard ↗</a>
+    </div>
+  </div>`;
+  const fmt2=n=>{n=Number(n)||0;return n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e3?Math.round(n/1e3)+"K":String(Math.round(n))};
+  return`<div class="card" style="margin-bottom:11px;border-left:3px solid var(--purple)">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
+    <div class="cl" style="margin-bottom:0;color:var(--purple)">🔗 Creator Dashboard — Live Data</div>
+    <a href="https://creator-dashboard-v4xe.onrender.com" target="_blank" class="btno bsm" style="text-decoration:none;font-size:9px">Open Dashboard ↗</a>
+  </div>
+  <div class="g4" style="margin-bottom:11px">
+    ${kpi("Campaigns",camps.length,allCrPosts.length+" total posts","var(--purple)",null)}
+    ${kpi("🟣 Live Posts",livePosts.length,"currently live","#a855f7",null)}
+    ${kpi("Total Creator Views",fmt2(totalViews),"all creator posts","#c8a96e","live")}
+    ${kpi("Creator Budget","$"+totalBudget.toLocaleString(),"total committed","#a8f0c8",null)}
+  </div>
+  <div class="cl" style="margin-bottom:8px">Active Campaigns</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    ${camps.map(c=>{
+      const cPosts=getCreatorPosts(c.id);
+      const cLive=cPosts.filter(p=>p.status==="live").length;
+      const cViews=cPosts.reduce((a,p)=>a+Number(p.views||0),0);
+      return`<a href="https://creator-dashboard-v4xe.onrender.com/#/campaign/${c.id}" target="_blank"
+        style="padding:8px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px;text-decoration:none;min-width:160px;flex:1">
+        <div style="font-size:11px;font-weight:700;color:var(--gold);font-family:'Syne',sans-serif;margin-bottom:3px">${c.name}</div>
+        <div style="font-size:10px;color:var(--tx2)">${c.artist}</div>
+        <div style="font-size:10px;color:#69C9D0;margin-top:5px">${cPosts.length} posts · ${cLive} live · ${fmt2(cViews)} views</div>
+      </a>`;
+    }).join("")}
+  </div>
+</div>`;
+}
+
+function buildActivePosts(limit=8){
+  const posts=getActivePosts().slice(0,limit);
+  const draftPosts=getAllCreatorPosts().filter(p=>p.status==="draft"||p.status==="review").slice(0,4);
+  if(!posts.length&&!draftPosts.length) return "";
+  const fmt2=n=>Number(n)>=1e6?(Number(n)/1e6).toFixed(1)+"M":Number(n)>=1e3?Math.round(Number(n)/1e3)+"K":String(Number(n)||"–");
+  const SC={live:"#a855f7",approved:"#4caf50",review:"#f0c040",draft:"#888"};
+  const SL={live:"🟣 Live",approved:"✓ Approved",review:"⏳ In Review",draft:"📝 Draft"};
+  return`<div class="card" style="margin-bottom:11px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
+      <div>
+        <div class="cl" style="margin-bottom:2px;color:#a855f7">🟣 Active Creator Posts — Live from Creator Dashboard</div>
+        <div style="font-size:9px;color:var(--tx2)">${posts.length} active · ${draftPosts.length} pending review</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="window.loadCreatorData().then(()=>renderPage())" class="btno bsm" style="font-size:9px">⟳ Refresh</button>
+        <a href="https://creator-dashboard-v4xe.onrender.com" target="_blank" class="btno bsm" style="text-decoration:none;font-size:9px">Open Dashboard ↗</a>
+      </div>
+    </div>
+    <div style="overflow-x:auto"><table>
+      <thead><tr><th>Handle</th><th>Platform</th><th>Status</th><th>Views</th><th>Likes</th><th>Eng%</th><th>Budget</th><th>Due</th><th>↗</th></tr></thead>
+      <tbody>
+      ${[...posts,...draftPosts.filter(d=>!posts.some(p=>p.id===d.id))].map(p=>{
+        const vv=Number(p.views)||0,lk=Number(p.likes)||0,cm=Number(p.comments)||0;
+        const er=vv>0?((lk+cm)/vv*100).toFixed(1)+"%":"—";
+        const hasDraftFile=!p.postUrl&&p.thumbnail;
+        return`<tr class="trow" onclick="window.open('${p.postUrl||"https://creator-dashboard-v4xe.onrender.com"}','_blank')">
+          <td style="font-weight:700;font-size:11px;color:#69C9D0">${p.handle?"@"+p.handle:"–"}</td>
+          <td>${pill(p.platform==="instagram"?"#E1306C":"#69C9D0",p.platform||"TikTok")}</td>
+          <td><span style="font-size:9px;padding:2px 7px;border-radius:10px;background:${SC[p.status||"draft"]}22;color:${SC[p.status||"draft"]};font-weight:700">${SL[p.status||"draft"]}</span>${hasDraftFile?' <span style="font-size:9px;color:var(--tx3)">📁</span>':''}</td>
+          <td style="font-family:'Playfair Display',serif;font-size:15px;color:var(--gold)">${vv?fmt2(vv):"–"}</td>
+          <td style="font-family:'Playfair Display',serif;font-size:15px">${lk?fmt2(lk):"–"}</td>
+          <td style="font-size:10px;color:var(--tx2)">${er}</td>
+          <td style="font-size:10px;color:#c8a96e">${p.budget&&Number(p.budget)>0?"$"+Number(p.budget).toLocaleString():"–"}</td>
+          <td style="font-size:10px;color:var(--tx2)">${p.deliverableDate||"–"}</td>
+          <td onclick="event.stopPropagation()">${p.postUrl?`<a href="${p.postUrl}" target="_blank" class="dl" style="color:#69C9D0">↗</a>`:hasDraftFile?'<span style="font-size:9px;color:var(--tx3)">📁 Draft</span>':"-"}</td>
+        </tr>`;
+      }).join("")}
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+
 const pill=(c,t)=>`<span class="pill" style="background:${c}18;color:${c};border:1px solid ${c}30">${t}</span>`;
 const bar=(l,v,p,c)=>`<div class="br"><div class="brl"><span>${l}</span><span style="color:${c};font-family:'Playfair Display',serif">${v}</span></div><div class="brt"><div class="brf" style="width:${Math.min(p,100)}%;background:${c}"></div></div></div>`;
 const kpi=(l,v,s,c,b)=>`<div class="kpi"><div class="kl">${l}${b?` <span class="bge bge-${b}">${b==="live"?"✅ LIVE":b==="wait"?"🔒 API":"⚡"}</span>`:""}</div><div class="kv" style="color:${c||"var(--tx)"}">${v}</div>${s?`<div class="ks">↑ ${s}</div>`:""}</div>`;
@@ -353,9 +745,10 @@ const FEED=[
 
 // ═══ OVERVIEW ═══
 function pgOverview(){return`
-<div class="an">✅ Spotify loading LIVE from Render backend · Mention estimates = sample (Brand24 MCP after coming soon) · Spotify monthly listeners require paid Render upgrade ($7/mo → coming soon)</div>
+${buildCreatorSummaryPanel()}
+<div class="an">✅ Spotify loading LIVE · Creator Dashboard data pulls from AK-CREATOR-DASHBOARD JSONBin · Mentions = Brand24 (coming soon)</div>
 <div class="g4">
-  ${kpi("Spotify Monthly Listeners","36.6M","+8.3% (30d) · API upgrade coming soon","#1DB954","live")}
+  ${kpi("Spotify Monthly Listeners","36.6M","+8.3% (30d)","#1DB954","live")}
   ${kpi("Instagram Followers","28M","0.61% engagement","#E1306C","live")}
   ${kpi("TikTok Followers","8M","50.5M total likes","#69C9D0","live")}
   ${kpi("Est. Total Mentions","~2.4M","Brand24 — coming soon","#c8a96e","wait")}
@@ -371,13 +764,16 @@ function pgOverview(){return`
     <div style="font-size:10px;color:var(--tx2);margin-top:8px">Top: <span style="color:var(--gold)">Con Cora Gala · Karol G · Plentiful · Girl on Fire</span></div>
   </div>
 </div>
+${buildActivePosts(4)}
 <div class="g2">
   <div class="card"><div class="cl">Share of Voice</div>${[["Alicia Keys",38,"#c8a96e"],["H.E.R.",22,"#69C9D0"],["Jhené Aiko",17,"#E1306C"],["SZA",14,"#1DB954"],["Others",9,"#606075"]].map(([l,p,c])=>bar(l,p+"%",p*2.5,c)).join("")}</div>
   <div class="card"><div class="cl">Geographic Reach</div>${[["New York",18],["Los Angeles",14],["London",11],["Atlanta",9],["Lagos",7],["Toronto",6],["Chicago",5],["Paris",4]].map(([l,p])=>bar(l,p+"%",p*5,"#c8a96e")).join("")}</div>
 </div>
 <div class="card"><div class="cl">Trending Hashtags</div>
   <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:5px">${["#AliciaKeys","#KarolG","#ConCoraGala","#Plentiful","#PushaT","#HellsKitchenBroadway","#Fallin","#GirlOnFire","#NoOne","#TrySleepingWithABrokenHeart","#IfIAintGotYou","#LaAurora"].map(t=>pill("#c8a96e",t)).join("")}</div>
-</div>`;}
+</div>
+${buildDataInputSection("overview","Overview")}`;
+}
 
 // ═══ PLATFORMS ═══
 function pgPlatforms(){
@@ -399,34 +795,50 @@ function pgPlatforms(){
   <div style="font-family:'Playfair Display',serif;font-size:28px;color:${p.c};line-height:1">${p.v}</div>
   <div style="font-size:10px;color:var(--tx2);margin:3px 0 7px">${p.sub}</div>
   <div style="font-size:10px;color:var(--tx2);padding-top:7px;border-top:1px solid var(--bdr)">${p.note}</div>
-</div>`).join("")}</div>`;}
+</div>`).join("")}</div>
+${buildDataInputSection("platforms","Platforms")}`;}
 
 // ═══ DSP ═══
 function pgDSP(){
   const DS=[
-    {n:"Spotify",c:"#1DB954",url:"https://open.spotify.com/artist/"+AK_SP_ID,ml:"36.6M",ch:"+8.3%"},
-    {n:"Apple Music",c:"#FC3C44",url:"https://music.apple.com/us/artist/alicia-keys/316069",ml:"~22M",ch:"+5.1%"},
-    {n:"YouTube Music",c:"#FF0000",url:"https://music.youtube.com/channel/UCF4-eKWB07vMKzsbxQq47ZA",ml:"~7M",ch:"+12%"},
-    {n:"Amazon Music",c:"#00A8E0",url:"https://music.amazon.com/artists/B000QZRQHU/alicia-keys",ml:"~14M",ch:"+4.2%"},
-    {n:"Tidal",c:"#ccccee",url:"https://tidal.com/browse/artist/1108",ml:"–",ch:"–"},
-    {n:"Deezer",c:"#A238FF",url:"https://www.deezer.com/en/search/alicia%20keys",ml:"–",ch:"–"},
+    {n:"Spotify",c:"#1DB954",url:"https://open.spotify.com/artist/"+AK_SP_ID,ml:"36.6M",ch:"+8.3%",id:"spotify"},
+    {n:"Apple Music",c:"#FC3C44",url:"https://music.apple.com/us/artist/alicia-keys/316069",ml:"~22M",ch:"+5.1%",id:"apple"},
+    {n:"YouTube Music",c:"#FF0000",url:"https://music.youtube.com/channel/UCF4-eKWB07vMKzsbxQq47ZA",ml:"~7M",ch:"+12%",id:"ytm"},
+    {n:"Amazon Music",c:"#00A8E0",url:"https://music.amazon.com/artists/B000QZRQHU/alicia-keys",ml:"~14M",ch:"+4.2%",id:"amz"},
+    {n:"Tidal",c:"#ccccee",url:"https://tidal.com/browse/artist/1108",ml:"–",ch:"–",id:"tidal"},
+    {n:"Deezer",c:"#A238FF",url:"https://www.deezer.com/en/search/alicia%20keys",ml:"–",ch:"–",id:"deezer"},
   ];
   const TOP_TRACKS=[
-    {name:"If I Ain't Got You",id:"1U1oh3G8CG4bbSjGQrJHmL",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+If+I+Aint+Got+You",streams:"1.2B"},
-    {name:"Fallin'",id:"6PFQGBGpC8kMGNGzfhPIVj",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Fallin",streams:"980M"},
-    {name:"No One",id:"3BsSZBClG4X0b1B6u4ADCT",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+No+One",streams:"860M"},
-    {name:"Girl on Fire",id:"4esOae7i4rqTbAu9o5Pxco",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Girl+on+Fire",streams:"620M"},
-    {name:"Try Sleeping with a Broken Heart",id:"5twlFMNQ2JEBs3rOTMIEfb",yt:"https://www.youtube.com/results?search_query=alicia+keys+try+sleeping",streams:"410M"},
-    {name:"Plentiful ft. Pusha T",id:"6e3HTEX6m3I5tCP8gbnjEl",yt:"https://www.youtube.com/results?search_query=alicia+keys+plentiful+pusha+t",streams:"2.1M"},
-    {name:"Underdog",id:"0mDQFa1FGlVvpBaxJFJCHY",yt:"https://www.youtube.com/results?search_query=alicia+keys+underdog",streams:"320M"},
-    {name:"Empire State of Mind Pt II",id:"3BiMRMWJ3mYFv2Fp25PHDA",yt:"https://www.youtube.com/results?search_query=alicia+keys+empire+state+of+mind",streams:"290M"},
+    {name:"If I Ain't Got You",id:"1U1oh3G8CG4bbSjGQrJHmL",cx:"https://chartex.com/song/alicia-keys-if-i-aint-got-you-82202",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+If+I+Aint+Got+You",streams:"1.2B",shazam:"469270443"},
+    {name:"Fallin'",id:"6PFQGBGpC8kMGNGzfhPIVj",cx:"https://chartex.com/song/alicia-keys-fallin-63225",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Fallin",streams:"980M",shazam:""},
+    {name:"No One",id:"3BsSZBClG4X0b1B6u4ADCT",cx:"https://chartex.com/song/alicia-keys-no-one-71727",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+No+One",streams:"860M",shazam:""},
+    {name:"Girl on Fire",id:"4esOae7i4rqTbAu9o5Pxco",cx:"https://chartex.com/song/alicia-keys-girl-on-fire-67833",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Girl+on+Fire",streams:"620M",shazam:""},
+    {name:"Try Sleeping with a Broken Heart",id:"5twlFMNQ2JEBs3rOTMIEfb",cx:"https://chartex.com/song/alicia-keys-try-sleeping-with-a-broken-heart-228643",yt:"https://www.youtube.com/results?search_query=alicia+keys+try+sleeping",streams:"410M",shazam:""},
+    {name:"Plentiful ft. Pusha T",id:"6e3HTEX6m3I5tCP8gbnjEl",cx:"https://chartex.com/song/alicia-keys-plentiful-originals-feat-pusha-t-1651917",yt:"https://www.youtube.com/results?search_query=alicia+keys+plentiful+pusha+t",streams:"2.1M",shazam:""},
+    {name:"Underdog",id:"0mDQFa1FGlVvpBaxJFJCHY",cx:"https://chartex.com/album/alicia-5234",yt:"https://www.youtube.com/results?search_query=alicia+keys+underdog",streams:"320M",shazam:""},
+    {name:"Empire State of Mind Pt II",id:"3BiMRMWJ3mYFv2Fp25PHDA",cx:"https://chartex.com/song/alicia-keys-empire-state-of-mind-pt-2-96064",yt:"https://www.youtube.com/results?search_query=alicia+keys+empire+state+of+mind",streams:"290M",shazam:""},
   ];
+  // Time filter state
+  if(!window._dspFilter) window._dspFilter = "30d";
+  const filters = [["All Time","all"],["30 Days","30d"],["7 Days","7d"],["24h","24h"]];
+  const filterData = {
+    all: {spotify:"36.6M", apple:"~22M", ytm:"~7M", amz:"~14M"},
+    "30d": {spotify:"36.6M", apple:"~22M", ytm:"~7M", amz:"~14M"},
+    "7d": {spotify:"~8.4M", apple:"~5M", ytm:"~1.8M", amz:"~3.2M"},
+    "24h": {spotify:"~1.2M", apple:"~700K", ytm:"~250K", amz:"~450K"},
+  };
   return`
-<div class="an">🎵 Spotify API activates Render upgrade ($7/mo) · All Spotify, Apple Music, YouTube links open live ↗ · ChartEx column → AK artist page · Apple Music uses search URLs (all work)</div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;flex-wrap:wrap;gap:8px">
+  <div style="display:flex;gap:5px">
+    ${filters.map(([l,v])=>`<button class="chip ${v===window._dspFilter?"on":""}" onclick="window._dspFilter='${v}';renderPage()">${l}</button>`).join("")}
+  </div>
+  <a href="https://sme-artistportal.com" target="_blank" class="btn bsm" style="text-decoration:none;background:var(--purple);font-size:9px">🎵 Sony Artist Portal ↗</a>
+</div>
+<div class="an">🎵 All DSP links live ↗ · ShazamCore tracks total Shazams · Apple Music API via RapidAPI · Sony portal opens direct</div>
 <div class="g4" style="margin-bottom:11px">
   ${kpi("Spotify Monthly Listeners","36.6M","+8.3% (30d)","#1DB954",null)}
   ${kpi("All-Time Streams","1.2B+","Spotify alone","#1DB954",null)}
-  ${kpi("Con Cora Gala Lift","+34%","Try Sleeping spike","#a8f0c8",null)}
+  ${kpi("TikTok Creates","4,370+","Try Sleeping · Con Cora Gala lift","#69C9D0",null)}
   ${kpi("Cross-DSP Est.","~85M","all platforms","#c8a96e","wait")}
 </div>
 <div class="g3" style="margin-bottom:11px">${DS.map(d=>`<div class="card" style="border-top:2px solid ${d.c}28">
@@ -434,26 +846,31 @@ function pgDSP(){
     <div style="font-weight:700;font-size:13px;color:${d.c};font-family:'Syne',sans-serif">${d.n}</div>
     <a href="${d.url}" target="_blank" class="btno" style="font-size:8px;padding:2px 7px;text-decoration:none">↗ Open</a>
   </div>
-  <div class="kl">Monthly Listeners</div>
-  <div style="font-family:'Playfair Display',serif;font-size:22px;color:${d.c};margin-bottom:5px">${d.ml}</div>
+  <div class="kl">Monthly Listeners (${window._dspFilter==="all"?"All Time":window._dspFilter})</div>
+  <div style="font-family:'Playfair Display',serif;font-size:22px;color:${d.c};margin-bottom:5px">${filterData[window._dspFilter]?.[d.id]||d.ml}</div>
   ${d.ch!=="–"?`<div style="font-size:9px;color:#a8f0c8;font-weight:700">↑ ${d.ch} (30d)</div>`:""}
 </div>`).join("")}</div>
 <div class="card" style="margin-bottom:11px">
-  <div class="cl">Top Tracks <span class="bge bge-live">✅ All Links Live</span></div>
-  <div style="overflow-x:auto"><table style="min-width:600px"><thead><tr><th>#</th><th>Track</th><th>Est. Streams</th><th>Spotify</th><th>YouTube</th><th>Apple Music</th><th>⚡ ChartEx</th></tr></thead>
+  <div class="cl">Top Tracks — ChartEx · Spotify · YouTube · Apple Music <span class="bge bge-live">✅ All Links Live</span></div>
+  <div style="overflow-x:auto"><table style="min-width:640px"><thead><tr><th>#</th><th>Track</th><th>Est. Streams</th><th>⚡ ChartEx</th><th>Spotify</th><th>YouTube</th><th>Apple Music</th><th>Shazam</th></tr></thead>
   <tbody>${TOP_TRACKS.map((t,i)=>`<tr class="trow">
     <td style="color:var(--tx2);font-size:10px;width:18px">${i+1}</td>
     <td style="font-weight:700;font-size:11px;font-family:'Syne',sans-serif">${t.name}</td>
     <td style="font-family:'Playfair Display',serif;font-size:16px;color:#a8f0c8">${t.streams}</td>
-    <td onclick="event.stopPropagation()"><a href="https://open.spotify.com/track/${t.id}" target="_blank" class="dl" style="color:#1DB954">Spotify ↗</a></td>
-    <td onclick="event.stopPropagation()"><a href="${t.yt}" target="_blank" class="dl" style="color:#FF0000">YouTube ↗</a></td>
-    <td onclick="event.stopPropagation()"><a href="https://music.apple.com/search?term=${enc(t.name+' Alicia Keys')}" target="_blank" class="dl" style="color:#FC3C44">Apple ↗</a></td>
-    <td onclick="event.stopPropagation()"><a href="https://chartex.com/artist/alicia-keys-9779" target="_blank" class="dl" style="color:#69C9D0">⚡ ChartEx</a></td>
+    <td onclick="event.stopPropagation()"><a href="${t.cx}" target="_blank" class="dl" style="color:#69C9D0">⚡ CX</a></td>
+    <td onclick="event.stopPropagation()"><a href="https://open.spotify.com/track/${t.id}" target="_blank" class="dl" style="color:#1DB954">SP ↗</a></td>
+    <td onclick="event.stopPropagation()"><a href="${t.yt}" target="_blank" class="dl" style="color:#FF0000">YT ↗</a></td>
+    <td onclick="event.stopPropagation()"><a href="https://music.apple.com/search?term=${enc(t.name+' Alicia Keys')}" target="_blank" class="dl" style="color:#FC3C44">AM ↗</a></td>
+    <td onclick="event.stopPropagation()">${t.shazam?`<button onclick="fetchShazamData('${t.shazam}','${t.name}')" class="dl" style="color:#0066ff;cursor:pointer;border:1px solid #0066ff33;background:none;border-radius:3px;font-size:8px;padding:2px 5px">📊 Shazams</button>`:"–"}</td>
   </tr>`).join("")}</tbody></table></div>
 </div>
-<div class="card">
-  <div class="cl">Artist Profiles — Open Live</div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+<div class="card" style="margin-bottom:11px" id="shazam-result" style="display:none"></div>
+<div class="card" style="margin-bottom:11px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
+    <div class="cl" style="margin-bottom:0">Artist Profiles — Open Live</div>
+    <a href="https://sme-artistportal.com" target="_blank" class="btno bsm" style="text-decoration:none;font-size:9px">🎵 Sony Portal ↗</a>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
     <a href="https://open.spotify.com/artist/${AK_SP_ID}" target="_blank" class="btn bsm" style="text-decoration:none;background:#1DB954">♫ Spotify ↗</a>
     <a href="https://music.apple.com/us/artist/alicia-keys/316069" target="_blank" class="btn bsm" style="text-decoration:none;background:#FC3C44">🍎 Apple Music ↗</a>
     <a href="https://music.youtube.com/channel/UCF4-eKWB07vMKzsbxQq47ZA" target="_blank" class="btn bsm" style="text-decoration:none;background:#FF0000">▶ YouTube Music ↗</a>
@@ -462,60 +879,85 @@ function pgDSP(){
     <a href="https://music.amazon.com/artists/B000QZRQHU/alicia-keys" target="_blank" class="btno bsm" style="text-decoration:none">Amazon ↗</a>
     <a href="https://www.deezer.com/en/search/alicia%20keys" target="_blank" class="btno bsm" style="text-decoration:none">Deezer ↗</a>
   </div>
-</div>`;}
+</div>
+${buildDataInputSection("dsp","DSP & Streaming")}`;
+}
+
+window.fetchShazamData=async(trackId,name)=>{
+  const el=document.getElementById("shazam-result");
+  if(!el)return;
+  el.style.display="block";
+  el.innerHTML=`<div class="loading">Loading Shazam data for ${name}…</div>`;
+  try{
+    const r=await fetch("/api/shazam-total?trackId="+trackId);
+    const d=await r.json();
+    const count=d?.result?.count||d?.count||d?.total||null;
+    el.innerHTML=`<div class="cl" style="margin-bottom:8px">📊 Shazam Data — ${name}</div>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div class="kpi" style="flex:1;min-width:150px">
+        <div class="kl">Total Shazams</div>
+        <div style="font-family:'Playfair Display',serif;font-size:28px;color:#0066ff">${count!=null?Number(count).toLocaleString():"–"}</div>
+      </div>
+      <div style="font-size:10px;color:var(--tx2);line-height:1.9;flex:2">
+        Shazams indicate <strong>discovery intent</strong> — people heard this song somewhere and wanted to know what it was.<br>
+        High Shazam counts = strong sync placement, radio, or viral sound moment.
+      </div>
+    </div>`;
+  }catch(e){el.innerHTML=`<div class="err">Shazam error: ${e.message} — check RAPID_KEY in Render</div>`;}
+};
 
 // ═══ CATALOGUE ═══
 const ALBUMS=[
   {t:"Songs in A Minor",y:"2001",songs:[
     {s:"Fallin'",x:1,cx:"https://chartex.com/song/alicia-keys-fallin-63225",tk:"https://www.tiktok.com/music/Fallin-6728714631021885441",sp:"https://open.spotify.com/search/Fallin%20Alicia%20Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Fallin",am:"https://music.apple.com/search?term=Fallin+Alicia+Keys"},
-    {s:"A Woman's Worth",x:1,cx:"https://chartex.com/search/?q=A+Womans+Worth+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=a+womans+worth+alicia+keys",sp:"https://open.spotify.com/search/A+Womans+Worth+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+A+Womans+Worth",am:"https://music.apple.com/search?term=A+Womans+Worth+Alicia+Keys"},
-    {s:"How Come You Don't Call Me",x:1,cx:"https://chartex.com/search/?q=How+Come+You+Dont+Call+Me+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=how+come+you+dont+call+me+alicia+keys",sp:"https://open.spotify.com/search/How+Come+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+How+Come",am:"https://music.apple.com/search?term=How+Come+Alicia+Keys"},
-    {s:"Girlfriend",x:1,cx:"https://chartex.com/search/?q=Girlfriend+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=girlfriend+alicia+keys",sp:"https://open.spotify.com/search/Girlfriend+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Girlfriend",am:"https://music.apple.com/search?term=Girlfriend+Alicia+Keys"},
-    {s:"Piano & I",cx:"https://chartex.com/search/?q=Piano+I+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=piano+i+alicia+keys",sp:"https://open.spotify.com/search/Piano+I+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Piano+I",am:"https://music.apple.com/search?term=Piano+I+Alicia+Keys"},
-    {s:"Caged Bird",cx:"https://chartex.com/search/?q=Caged+Bird+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=caged+bird+alicia+keys",sp:"https://open.spotify.com/search/Caged+Bird+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Caged+Bird",am:"https://music.apple.com/search?term=Caged+Bird+Alicia+Keys"},
+    {s:"A Woman's Worth",x:1,cx:"https://chartex.com/album/songs-in-a-minor-5245",tk:"https://www.tiktok.com/music/search?q=a+womans+worth+alicia+keys",sp:"https://open.spotify.com/search/A+Womans+Worth+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+A+Womans+Worth",am:"https://music.apple.com/search?term=A+Womans+Worth+Alicia+Keys"},
+    {s:"How Come You Don't Call Me",x:1,cx:"https://chartex.com/album/songs-in-a-minor-5245",tk:"https://www.tiktok.com/music/search?q=how+come+you+dont+call+me+alicia+keys",sp:"https://open.spotify.com/search/How+Come+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+How+Come",am:"https://music.apple.com/search?term=How+Come+Alicia+Keys"},
+    {s:"Girlfriend",x:1,cx:"https://chartex.com/album/songs-in-a-minor-5245",tk:"https://www.tiktok.com/music/search?q=girlfriend+alicia+keys",sp:"https://open.spotify.com/search/Girlfriend+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Girlfriend",am:"https://music.apple.com/search?term=Girlfriend+Alicia+Keys"},
+    {s:"Piano & I",cx:"https://chartex.com/album/songs-in-a-minor-5245",tk:"https://www.tiktok.com/music/search?q=piano+i+alicia+keys",sp:"https://open.spotify.com/search/Piano+I+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Piano+I",am:"https://music.apple.com/search?term=Piano+I+Alicia+Keys"},
+    {s:"Caged Bird",cx:"https://chartex.com/album/songs-in-a-minor-5245",tk:"https://www.tiktok.com/music/search?q=caged+bird+alicia+keys",sp:"https://open.spotify.com/search/Caged+Bird+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Caged+Bird",am:"https://music.apple.com/search?term=Caged+Bird+Alicia+Keys"},
   ]},
   {t:"The Diary of Alicia Keys",y:"2003",songs:[
-    {s:"You Don't Know My Name",x:1,cx:"https://chartex.com/search/?q=You+Dont+Know+My+Name+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=you+dont+know+my+name+alicia+keys",sp:"https://open.spotify.com/search/You+Dont+Know+My+Name+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+You+Dont+Know+My+Name",am:"https://music.apple.com/search?term=You+Dont+Know+My+Name+Alicia+Keys"},
+    {s:"You Don't Know My Name",x:1,cx:"https://chartex.com/album/the-diary-of-alicia-keys-5243",tk:"https://www.tiktok.com/music/search?q=you+dont+know+my+name+alicia+keys",sp:"https://open.spotify.com/search/You+Dont+Know+My+Name+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+You+Dont+Know+My+Name",am:"https://music.apple.com/search?term=You+Dont+Know+My+Name+Alicia+Keys"},
     {s:"If I Ain't Got You",x:1,cx:"https://chartex.com/song/alicia-keys-if-i-aint-got-you-82202",tk:"https://www.tiktok.com/music/If-I-Aint-Got-You-6736065934512095233",sp:"https://open.spotify.com/search/If+I+Aint+Got+You+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+If+I+Aint+Got+You",am:"https://music.apple.com/search?term=If+I+Aint+Got+You+Alicia+Keys"},
-    {s:"Diary",x:1,cx:"https://chartex.com/search/?q=Diary+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=diary+alicia+keys",sp:"https://open.spotify.com/search/Diary+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Diary",am:"https://music.apple.com/search?term=Diary+Alicia+Keys"},
-    {s:"Karma",cx:"https://chartex.com/search/?q=Karma+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=karma+alicia+keys",sp:"https://open.spotify.com/search/Karma+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Karma",am:"https://music.apple.com/search?term=Karma+Alicia+Keys"},
+    {s:"Diary",x:1,cx:"https://chartex.com/album/the-diary-of-alicia-keys-5243",tk:"https://www.tiktok.com/music/search?q=diary+alicia+keys",sp:"https://open.spotify.com/search/Diary+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Diary",am:"https://music.apple.com/search?term=Diary+Alicia+Keys"},
+    {s:"Karma",cx:"https://chartex.com/album/the-diary-of-alicia-keys-5243",tk:"https://www.tiktok.com/music/search?q=karma+alicia+keys",sp:"https://open.spotify.com/search/Karma+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Karma",am:"https://music.apple.com/search?term=Karma+Alicia+Keys"},
   ]},
   {t:"As I Am",y:"2007",songs:[
     {s:"No One",x:1,cx:"https://chartex.com/song/alicia-keys-no-one-71727",tk:"https://www.tiktok.com/music/No-One-6728936312345600003",sp:"https://open.spotify.com/search/No+One+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+No+One",am:"https://music.apple.com/search?term=No+One+Alicia+Keys"},
-    {s:"Like You'll Never See Me Again",x:1,cx:"https://chartex.com/search/?q=Like+Youll+Never+See+Me+Again+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=like+youll+never+see+me+again+alicia+keys",sp:"https://open.spotify.com/search/Like+Youll+Never+See+Me+Again+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Like+Youll+Never+See+Me+Again",am:"https://music.apple.com/search?term=Like+Youll+Never+See+Me+Again+Alicia+Keys"},
-    {s:"Superwoman",x:1,cx:"https://chartex.com/search/?q=Superwoman+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=superwoman+alicia+keys",sp:"https://open.spotify.com/search/Superwoman+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Superwoman",am:"https://music.apple.com/search?term=Superwoman+Alicia+Keys"},
-    {s:"Teenage Love Affair",x:1,cx:"https://chartex.com/search/?q=Teenage+Love+Affair+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=teenage+love+affair+alicia+keys",sp:"https://open.spotify.com/search/Teenage+Love+Affair+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Teenage+Love+Affair",am:"https://music.apple.com/search?term=Teenage+Love+Affair+Alicia+Keys"},
+    {s:"Like You'll Never See Me Again",x:1,cx:"https://chartex.com/album/as-i-am-expanded-edition-5239",tk:"https://www.tiktok.com/music/search?q=like+youll+never+see+me+again+alicia+keys",sp:"https://open.spotify.com/search/Like+Youll+Never+See+Me+Again+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Like+Youll+Never+See+Me+Again",am:"https://music.apple.com/search?term=Like+Youll+Never+See+Me+Again+Alicia+Keys"},
+    {s:"Superwoman",x:1,cx:"https://chartex.com/album/as-i-am-expanded-edition-5239",tk:"https://www.tiktok.com/music/search?q=superwoman+alicia+keys",sp:"https://open.spotify.com/search/Superwoman+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Superwoman",am:"https://music.apple.com/search?term=Superwoman+Alicia+Keys"},
+    {s:"Teenage Love Affair",x:1,cx:"https://chartex.com/album/as-i-am-expanded-edition-5239",tk:"https://www.tiktok.com/music/search?q=teenage+love+affair+alicia+keys",sp:"https://open.spotify.com/search/Teenage+Love+Affair+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Teenage+Love+Affair",am:"https://music.apple.com/search?term=Teenage+Love+Affair+Alicia+Keys"},
   ]},
   {t:"The Element of Freedom",y:"2009",songs:[
     {s:"Try Sleeping with a Broken Heart",x:1,hot:1,cx:"https://chartex.com/tiktok/sounds/6750463448448761858",tk:"https://www.tiktok.com/music/Try-Sleeping-with-a-Broken-Heart-6750463448448761858",sp:"https://open.spotify.com/search/Try+Sleeping+Broken+Heart+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Try+Sleeping",am:"https://music.apple.com/search?term=Try+Sleeping+Broken+Heart+Alicia+Keys"},
     {s:"Un-Thinkable (I'm Ready)",x:1,cx:"https://chartex.com/song/alicia-keys-un-thinkable-im-ready-remix-feat-drake-80308",tk:"https://www.tiktok.com/music/search?q=unthinkable+alicia+keys",sp:"https://open.spotify.com/search/Un-Thinkable+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Un+Thinkable",am:"https://music.apple.com/search?term=Unthinkable+Alicia+Keys"},
     {s:"Empire State of Mind (Part II)",x:1,cx:"https://chartex.com/song/alicia-keys-empire-state-of-mind-pt-2-96064",tk:"https://www.tiktok.com/music/search?q=empire+state+of+mind+alicia+keys",sp:"https://open.spotify.com/search/Empire+State+of+Mind+Part+II+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Empire+State+of+Mind",am:"https://music.apple.com/search?term=Empire+State+of+Mind+Alicia+Keys"},
-    {s:"Put It in a Love Song ft. Beyonce",cx:"https://chartex.com/search/?q=Put+It+In+A+Love+Song+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=put+it+in+a+love+song+alicia+keys",sp:"https://open.spotify.com/search/Put+It+In+A+Love+Song+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Put+It+In+A+Love+Song",am:"https://music.apple.com/search?term=Put+It+In+A+Love+Song+Alicia+Keys"},
+    {s:"Put It in a Love Song ft. Beyonce",cx:"https://chartex.com/album/the-element-of-freedom-5238",tk:"https://www.tiktok.com/music/search?q=put+it+in+a+love+song+alicia+keys",sp:"https://open.spotify.com/search/Put+It+In+A+Love+Song+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Put+It+In+A+Love+Song",am:"https://music.apple.com/search?term=Put+It+In+A+Love+Song+Alicia+Keys"},
   ]},
   {t:"Girl on Fire",y:"2012",songs:[
     {s:"Girl on Fire",x:1,hot:1,cx:"https://chartex.com/song/alicia-keys-girl-on-fire-67833",tk:"https://www.tiktok.com/music/Girl-on-Fire-203966699904229376",sp:"https://open.spotify.com/search/Girl+on+Fire+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Girl+on+Fire",am:"https://music.apple.com/search?term=Girl+on+Fire+Alicia+Keys"},
-    {s:"Brand New Me",x:1,cx:"https://chartex.com/search/?q=Brand+New+Me+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=brand+new+me+alicia+keys",sp:"https://open.spotify.com/search/Brand+New+Me+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Brand+New+Me",am:"https://music.apple.com/search?term=Brand+New+Me+Alicia+Keys"},
-    {s:"New Day",x:1,cx:"https://chartex.com/search/?q=New+Day+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=new+day+alicia+keys",sp:"https://open.spotify.com/search/New+Day+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+New+Day",am:"https://music.apple.com/search?term=New+Day+Alicia+Keys"},
+    {s:"Brand New Me",x:1,cx:"https://chartex.com/song/alicia-keys-girl-on-fire-67833",tk:"https://www.tiktok.com/music/search?q=brand+new+me+alicia+keys",sp:"https://open.spotify.com/search/Brand+New+Me+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Brand+New+Me",am:"https://music.apple.com/search?term=Brand+New+Me+Alicia+Keys"},
+    {s:"New Day",x:1,cx:"https://chartex.com/song/alicia-keys-girl-on-fire-67833",tk:"https://www.tiktok.com/music/search?q=new+day+alicia+keys",sp:"https://open.spotify.com/search/New+Day+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+New+Day",am:"https://music.apple.com/search?term=New+Day+Alicia+Keys"},
   ]},
   {t:"Here",y:"2016",songs:[
-    {s:"In Common",x:1,cx:"https://chartex.com/search/?q=In+Common+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=in+common+alicia+keys",sp:"https://open.spotify.com/search/In+Common+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+In+Common",am:"https://music.apple.com/search?term=In+Common+Alicia+Keys"},
-    {s:"Blended Family ft. ASAP Rocky",x:1,cx:"https://chartex.com/search/?q=Blended+Family+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=blended+family+alicia+keys",sp:"https://open.spotify.com/search/Blended+Family+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Blended+Family",am:"https://music.apple.com/search?term=Blended+Family+Alicia+Keys"},
-    {s:"Holy War",cx:"https://chartex.com/search/?q=Holy+War+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=holy+war+alicia+keys",sp:"https://open.spotify.com/search/Holy+War+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Holy+War",am:"https://music.apple.com/search?term=Holy+War+Alicia+Keys"},
+    {s:"In Common",x:1,cx:"https://chartex.com/artist/alicia-keys-9779",tk:"https://www.tiktok.com/music/search?q=in+common+alicia+keys",sp:"https://open.spotify.com/search/In+Common+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+In+Common",am:"https://music.apple.com/search?term=In+Common+Alicia+Keys"},
+    {s:"Blended Family ft. ASAP Rocky",x:1,cx:"https://chartex.com/artist/alicia-keys-9779",tk:"https://www.tiktok.com/music/search?q=blended+family+alicia+keys",sp:"https://open.spotify.com/search/Blended+Family+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Blended+Family",am:"https://music.apple.com/search?term=Blended+Family+Alicia+Keys"},
+    {s:"Holy War",cx:"https://chartex.com/artist/alicia-keys-9779",tk:"https://www.tiktok.com/music/search?q=holy+war+alicia+keys",sp:"https://open.spotify.com/search/Holy+War+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Holy+War",am:"https://music.apple.com/search?term=Holy+War+Alicia+Keys"},
   ]},
   {t:"ALICIA",y:"2020",songs:[
-    {s:"Underdog",x:1,cx:"https://chartex.com/search/?q=Underdog+Alicia+Keys",tk:"https://www.tiktok.com/music/Underdog-6796948440765370369",sp:"https://open.spotify.com/search/Underdog+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Underdog",am:"https://music.apple.com/search?term=Underdog+Alicia+Keys"},
-    {s:"Show Me Love ft. Miguel",x:1,cx:"https://chartex.com/search/?q=Show+Me+Love+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=show+me+love+alicia+keys+miguel",sp:"https://open.spotify.com/search/Show+Me+Love+Alicia+Keys+Miguel",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Show+Me+Love",am:"https://music.apple.com/search?term=Show+Me+Love+Alicia+Keys"},
-    {s:"Perfect Way to Die",cx:"https://chartex.com/search/?q=Perfect+Way+to+Die+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=perfect+way+to+die+alicia+keys",sp:"https://open.spotify.com/search/Perfect+Way+to+Die+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Perfect+Way+to+Die",am:"https://music.apple.com/search?term=Perfect+Way+to+Die+Alicia+Keys"},
+    {s:"Underdog",x:1,cx:"https://chartex.com/album/alicia-5234",tk:"https://www.tiktok.com/music/Underdog-6796948440765370369",sp:"https://open.spotify.com/search/Underdog+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Underdog",am:"https://music.apple.com/search?term=Underdog+Alicia+Keys"},
+    {s:"Show Me Love ft. Miguel",x:1,cx:"https://chartex.com/album/alicia-5234",tk:"https://www.tiktok.com/music/search?q=show+me+love+alicia+keys+miguel",sp:"https://open.spotify.com/search/Show+Me+Love+Alicia+Keys+Miguel",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Show+Me+Love",am:"https://music.apple.com/search?term=Show+Me+Love+Alicia+Keys"},
+    {s:"Perfect Way to Die",cx:"https://chartex.com/album/alicia-5234",tk:"https://www.tiktok.com/music/search?q=perfect+way+to+die+alicia+keys",sp:"https://open.spotify.com/search/Perfect+Way+to+Die+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Perfect+Way+to+Die",am:"https://music.apple.com/search?term=Perfect+Way+to+Die+Alicia+Keys"},
   ]},
   {t:"KEYS / KEYS II",y:"2021",songs:[
     {s:"Plentiful ft. Pusha T",x:1,hot:1,cx:"https://chartex.com/song/alicia-keys-plentiful-originals-feat-pusha-t-1651917",tk:"https://www.tiktok.com/music/search?q=plentiful+alicia+keys+pusha+t",sp:"https://open.spotify.com/search/Plentiful+Alicia+Keys+Pusha+T",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Plentiful+Pusha+T",am:"https://music.apple.com/search?term=Plentiful+Alicia+Keys+Pusha+T"},
-    {s:"LALA ft. Swae Lee",x:1,cx:"https://chartex.com/search/?q=LALA+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=lala+alicia+keys+swae+lee",sp:"https://open.spotify.com/search/LALA+Alicia+Keys+Swae+Lee",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+LALA+Swae+Lee",am:"https://music.apple.com/search?term=LALA+Alicia+Keys+Swae+Lee"},
-    {s:"Come For Me ft. Khalid & Lucky Daye",x:1,cx:"https://chartex.com/search/?q=Come+For+Me+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=come+for+me+alicia+keys+khalid",sp:"https://open.spotify.com/search/Come+For+Me+Alicia+Keys+Khalid",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Come+For+Me+Khalid",am:"https://music.apple.com/search?term=Come+For+Me+Alicia+Keys+Khalid"},
+    {s:"LALA ft. Swae Lee",x:1,cx:"https://chartex.com/artist/alicia-keys-9779",tk:"https://www.tiktok.com/music/search?q=lala+alicia+keys+swae+lee",sp:"https://open.spotify.com/search/LALA+Alicia+Keys+Swae+Lee",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+LALA+Swae+Lee",am:"https://music.apple.com/search?term=LALA+Alicia+Keys+Swae+Lee"},
+    {s:"Come For Me ft. Khalid & Lucky Daye",x:1,cx:"https://chartex.com/artist/alicia-keys-9779",tk:"https://www.tiktok.com/music/search?q=come+for+me+alicia+keys+khalid",sp:"https://open.spotify.com/search/Come+For+Me+Alicia+Keys+Khalid",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Come+For+Me+Khalid",am:"https://music.apple.com/search?term=Come+For+Me+Alicia+Keys+Khalid"},
   ]},
   {t:"2022-2025 Singles & Collabs",y:"2022-25",songs:[
-    {s:"City of Gods ft. Nicki Minaj & Fivio Foreign",x:1,cx:"https://chartex.com/search/?q=City+of+Gods+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=city+of+gods+alicia+keys",sp:"https://open.spotify.com/search/City+of+Gods+Alicia+Keys+Nicki+Minaj",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+City+of+Gods",am:"https://music.apple.com/search?term=City+of+Gods+Alicia+Keys"},
-    {s:"Kaleidoscope (Hell's Kitchen OST)",x:1,cx:"https://chartex.com/search/?q=Kaleidoscope+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=kaleidoscope+alicia+keys",sp:"https://open.spotify.com/search/Kaleidoscope+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Kaleidoscope",am:"https://music.apple.com/search?term=Kaleidoscope+Alicia+Keys"},
-    {s:"L'Aurora ft. Eros Ramazzotti",x:1,cx:"https://chartex.com/search/?q=LAurora+Alicia+Keys",tk:"https://www.tiktok.com/music/search?q=lauora+alicia+keys+eros+ramazzotti",sp:"https://open.spotify.com/search/LAurora+Alicia+Keys+Eros+Ramazzotti",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Eros+Ramazzotti",am:"https://music.apple.com/search?term=LAurora+Alicia+Keys+Eros+Ramazzotti"},
+    {s:"City of Gods ft. Nicki Minaj & Fivio Foreign",x:1,cx:"https://chartex.com/song/fivio-foreign-kanye-west-and-alicia-keys-city-of-gods-175736",tk:"https://www.tiktok.com/music/search?q=city+of+gods+alicia+keys",sp:"https://open.spotify.com/search/City+of+Gods+Alicia+Keys+Nicki+Minaj",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+City+of+Gods",am:"https://music.apple.com/search?term=City+of+Gods+Alicia+Keys"},
+    {s:"Kaleidoscope (Hell's Kitchen OST)",x:1,cx:"https://chartex.com/artist/alicia-keys-9779",tk:"https://www.tiktok.com/music/search?q=kaleidoscope+alicia+keys",sp:"https://open.spotify.com/search/Kaleidoscope+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Kaleidoscope",am:"https://music.apple.com/search?term=Kaleidoscope+Alicia+Keys"},
+    {s:"L'Aurora ft. Eros Ramazzotti",x:1,cx:"https://chartex.com/song/eros-ramazzotti-and-alicia-keys-laurora-7944627",tk:"https://www.tiktok.com/music/search?q=lauora+alicia+keys+eros+ramazzotti",sp:"https://open.spotify.com/search/LAurora+Alicia+Keys+Eros+Ramazzotti",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Eros+Ramazzotti",am:"https://music.apple.com/search?term=LAurora+Alicia+Keys+Eros+Ramazzotti"},
     {s:"Finally ft. Swedish House Mafia",x:1,cx:"https://chartex.com/song/swedish-house-mafia-and-alicia-keys-finally-154615",tk:"https://www.tiktok.com/music/search?q=finally+alicia+keys+swedish+house+mafia",sp:"https://open.spotify.com/search/Finally+Alicia+Keys+Swedish+House+Mafia",yt:"https://www.youtube.com/results?search_query=Alicia+Keys+Finally+Swedish+House+Mafia",am:"https://music.apple.com/search?term=Finally+Alicia+Keys+Swedish+House+Mafia"},
     {s:"My Boo ft. Usher",x:1,cx:"https://chartex.com/song/usher-and-alicia-keys-my-boo-78510",tk:"https://www.tiktok.com/music/search?q=my+boo+usher+alicia+keys",sp:"https://open.spotify.com/search/My+Boo+Usher+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=My+Boo+Usher+Alicia+Keys",am:"https://music.apple.com/search?term=My+Boo+Usher+Alicia+Keys"},
     {s:"Empire State of Mind ft. AK (Jay-Z)",x:1,cx:"https://chartex.com/song/jay-z-empire-state-of-mind-feat-alicia-keys-59728",tk:"https://www.tiktok.com/music/search?q=empire+state+of+mind+jay+z+alicia+keys",sp:"https://open.spotify.com/search/Empire+State+of+Mind+Jay+Z+Alicia+Keys",yt:"https://www.youtube.com/results?search_query=Jay+Z+Empire+State+of+Mind+Alicia+Keys",am:"https://music.apple.com/search?term=Empire+State+of+Mind+Jay+Z+Alicia+Keys"},
@@ -620,7 +1062,7 @@ const CX_SONG_MAP={
   "try sleeping":{cx:"https://chartex.com/tiktok/sounds/6750463448448761858",sp:"https://open.spotify.com/track/5twlFMNQ2JEBs3rOTMIEfb"},
   "broken heart":{cx:"https://chartex.com/tiktok/sounds/6750463448448761858",sp:"https://open.spotify.com/track/5twlFMNQ2JEBs3rOTMIEfb"},
   "plentiful":{cx:"https://chartex.com/song/alicia-keys-plentiful-originals-feat-pusha-t-1651917",sp:"https://open.spotify.com/track/6e3HTEX6m3I5tCP8gbnjEl"},
-  "underdog":{cx:"https://chartex.com/search/?q=Underdog+Alicia+Keys",sp:"https://open.spotify.com/track/0mDQFa1FGlVvpBaxJFJCHY"},
+  "underdog":{cx:"https://chartex.com/album/alicia-5234",sp:"https://open.spotify.com/track/0mDQFa1FGlVvpBaxJFJCHY"},
   "empire state":{cx:"https://chartex.com/song/alicia-keys-empire-state-of-mind-pt-2-96064",sp:"https://open.spotify.com/track/3BiMRMWJ3mYFv2Fp25PHDA"},
   "unthinkable":{cx:"https://chartex.com/song/alicia-keys-un-thinkable-im-ready-remix-feat-drake-80308",sp:"https://open.spotify.com/track/4W4fNrZYkobj539TOVBPhm"},
   "my boo":{cx:"https://chartex.com/song/usher-and-alicia-keys-my-boo-78510",sp:"https://open.spotify.com/search/My+Boo+Usher+Alicia+Keys"},
@@ -1778,6 +2220,92 @@ function saveCRMLocal(){localStorage.setItem("wm_crm",JSON.stringify(crmData));}
 (()=>{const d=localStorage.getItem("wm_crm");if(d){try{crmData=JSON.parse(d);}catch{}}})();
 
 function pgCRM(){
+  // Pull active creators from creator dashboard
+  const creatorCamps = getCreatorCampaigns();
+  const allCrPosts = getAllCreatorPosts();
+  const activeCrPosts = getActivePosts();
+  const pendingCrPosts = getPendingPosts();
+  const fmt2=n=>Number(n)>=1e6?(Number(n)/1e6).toFixed(1)+"M":Number(n)>=1e3?Math.round(Number(n)/1e3)+"K":String(Number(n)||"–");
+
+  const totF=crmData.reduce((a,c)=>a+parseInt(c.fee.replace(/[$,]/g,"")||0),0);
+
+  // Active creator posts panel (from creator dashboard)
+  const activePanelHtml = activeCrPosts.length ? `
+  <div class="card" style="margin-bottom:11px;border-left:3px solid #69C9D0">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
+      <div>
+        <div class="cl" style="margin-bottom:2px;color:#69C9D0">🔴 Active Creators — Live from Creator Dashboard</div>
+        <div style="font-size:9px;color:var(--tx2)">${activeCrPosts.length} active posts · ${pendingCrPosts.length} pending review</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="window.loadCreatorData().then(()=>renderPage())" class="btno bsm" style="font-size:9px">⟳ Refresh</button>
+        <a href="https://creator-dashboard-v4xe.onrender.com" target="_blank" class="btno bsm" style="text-decoration:none;font-size:9px">Open Dashboard ↗</a>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      ${["live","approved","review","draft"].map(st=>{
+        const count=allCrPosts.filter(p=>(p.status||"draft")===st).length;
+        const colors={"live":"#69C9D0","approved":"#4caf50","review":"#f0c040","draft":"#888"};
+        return`<div style="padding:7px 12px;background:${colors[st]}11;border:1px solid ${colors[st]}33;border-radius:8px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:${colors[st]}">${count}</div>
+          <div style="font-size:9px;color:${colors[st]};font-weight:700;text-transform:uppercase;letter-spacing:.07em">${st}</div>
+        </div>`;
+      }).join("")}
+    </div>
+    <div style="overflow-x:auto"><table style="min-width:700px">
+      <thead><tr><th>Handle</th><th>Platform</th><th>Campaign</th><th>Status</th><th>Views</th><th>Likes</th><th>Due Date</th><th>Comments</th><th>↗</th></tr></thead>
+      <tbody>${activeCrPosts.slice(0,8).map(p=>{
+        const camp=creatorCamps.find(c=>getCreatorPosts(c.id).some(pp=>pp.id===p.id));
+        return`<tr class="trow" onclick="window.open('${p.postUrl||"#"}','_blank')">
+          <td style="font-weight:700;font-size:11px;color:#69C9D0">${p.handle?"@"+p.handle:"–"}</td>
+          <td>${pill(p.platform==="instagram"?"#E1306C":"#69C9D0",p.platform||"TikTok")}</td>
+          <td style="font-size:10px;color:var(--tx2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${camp?.name||"–"}</td>
+          <td><span style="font-size:9px;padding:2px 7px;border-radius:10px;background:${p.status==="live"?"#69C9D022":"#4caf5022"};color:${p.status==="live"?"#69C9D0":"#4caf50"};font-weight:700">${p.status==="live"?"🟣 Live":"✓ Approved"}</span></td>
+          <td style="font-family:'Playfair Display',serif;font-size:15px;color:var(--gold)">${fmt2(p.views)}</td>
+          <td style="font-family:'Playfair Display',serif;font-size:15px">${fmt2(p.likes)}</td>
+          <td style="font-size:10px;color:var(--tx2)">${p.deliverableDate||"–"}</td>
+          <td style="font-size:10px;color:var(--tx2)">${(p.threadComments||[]).length}</td>
+          <td onclick="event.stopPropagation()"><a href="${p.postUrl||"#"}" target="_blank" class="dl" style="color:#69C9D0">↗</a></td>
+        </tr>`;
+      }).join("")}
+      </tbody>
+    </table></div>
+  </div>` : `<div class="card" style="margin-bottom:11px;border:1px dashed var(--bdr)">
+    <div class="cl">Active Creators</div>
+    <div style="font-size:10px;color:var(--tx2);padding:8px 0">No active posts yet — add creator posts in the Creator Dashboard</div>
+  </div>`;
+
+  return`
+<div style="display:flex;gap:7px;margin-bottom:11px;align-items:center;flex-wrap:wrap">
+  <button class="btno bsm" onclick="go('campaigns')">← Campaigns</button>
+  <button class="btno bsm" onclick="go('budget')">$ Budget</button>
+  <button class="btn bsm" onclick="openCreatorSearch()" style="margin-left:auto">🔍 Search Creators</button>
+  <button class="btn bsm" onclick="addCRMRow()">+ Add Creator</button>
+  <button class="btno bsm" onclick="exportCRM()">Export CSV</button>
+</div>
+${activePanelHtml}
+<div class="an">✅ Editable inline · Save writes to Airtable · Active creators pulled from Creator Dashboard · Rates feed into Budget Tracker · Use 🔍 to search TikTok creators via Scraptik</div>
+<div class="g4" style="margin-bottom:11px">
+  ${kpi("Total Creators",crmData.length,"all campaigns","var(--tx)",null)}
+  ${kpi("Contracted",crmData.filter(c=>c.st==="contracted").length,"active","#a8f0c8",null)}
+  ${kpi("Creator Dashboard",creatorCamps.length+" campaigns",allCrPosts.length+" total posts","#69C9D0",null)}
+  ${kpi("Total Fees","$"+totF.toLocaleString(),"committed","#c8a96e",null)}
+</div>
+<div class="card">
+  <div class="cl">Creator Roster <span class="bge bge-live">✅ Airtable</span></div>
+  <div style="overflow-x:auto;margin-top:8px"><table id="crm-table" style="min-width:960px">
+    <thead><tr><th>Name</th><th>Handle</th><th>Platform</th><th>Followers</th><th>Eng%</th><th>Fee / Rate</th><th>Assign Campaign</th><th>Status</th><th>Agent</th><th>Agent Email</th><th>Turnaround</th><th>Notes</th><th>↗</th><th>Save</th></tr></thead>
+    <tbody>${crmData.map(c=>crmRow(c)).join("")}</tbody>
+  </table></div>
+</div>
+${buildDataInputSection("crm","Creator CRM")}`;
+}
+
+const CRM_SC={contracted:"#a8f0c8",negotiating:"#f0e68c","outreach sent":"#69C9D0","draft review":"#c8a96e",approved:"#a8f0c8"};
+function saveCRMLocal(){localStorage.setItem("wm_crm",JSON.stringify(crmData));}
+(()=>{const d=localStorage.getItem("wm_crm");if(d){try{crmData=JSON.parse(d);}catch{}}})();
+
+function pgCRM(){
   const totF=crmData.reduce((a,c)=>a+parseInt(c.fee.replace(/[$,]/g,"")||0),0);
   return`
 <div style="display:flex;gap:7px;margin-bottom:11px;align-items:center;flex-wrap:wrap">
@@ -2048,7 +2576,68 @@ function pgCalendar(){return`
     ✅ Apr 24 — FB Live Promo · Apr 28 — Monthly Report<br>
     <span style="color:#69C9D0">Approve a draft below → event automatically created in jesskim@wirehousemedia.com</span>
   </div>
-</div>`;}
+</div>
+${
+<div class="card" style="margin-bottom:11px;border-left:3px solid var(--purple)">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+    <div class="cl" style="margin-bottom:0;color:var(--purple)">📅 Creator Post Deliverables — from Creator Dashboard</div>
+    <a href="https://creator-dashboard-v4xe.onrender.com" target="_blank" class="btno bsm" style="text-decoration:none;font-size:9px">Open Dashboard ↗</a>
+  </div>
+  ${(()=>{
+    const allPosts=getAllCreatorPosts().filter(p=>p.deliverableDate);
+    if(!allPosts.length) return "<div style='font-size:10px;color:var(--tx3);padding:8px 0'>No deliverable dates set — add in Creator Dashboard when editing posts</div>";
+    const SC={draft:"#888",review:"#f0c040",approved:"#4caf50",live:"#a855f7"};
+    const SL={draft:"📝 Draft",review:"⏳ Review",approved:"✓ Approved",live:"🟣 Live"};
+    const sorted=[...allPosts].sort((a,b)=>new Date(a.deliverableDate)-new Date(b.deliverableDate));
+    return "<div style='display:flex;flex-direction:column;gap:7px'>"+sorted.map(p=>{
+      const daysLeft=Math.ceil((new Date(p.deliverableDate)-new Date())/(1000*60*60*24));
+      const isOverdue=daysLeft<0,isSoon=daysLeft>=0&&daysLeft<=3;
+      return "<div style='display:flex;align-items:center;gap:10px;padding:8px 11px;background:var(--bg3);border:1px solid "+(isOverdue?"#f09a9a33":isSoon?"#f0c04033":"var(--bdr)")+";border-radius:8px'>"+
+        "<div style='font-size:11px;font-weight:700;min-width:80px;color:"+(isOverdue?"#f09a9a":isSoon?"#f0c040":"var(--tx2)")+"'>"+p.deliverableDate+(isOverdue?" ⚠":"isSoon?" ⏰":"")+"</div>"+
+        "<div style='flex:1'><span style='font-size:11px;font-weight:700;color:#69C9D0'>"+(p.handle?"@"+p.handle:"–")+"</span></div>"+
+        "<span style='font-size:9px;padding:2px 7px;border-radius:10px;background:"+SC[p.status||"draft"]+"22;color:"+SC[p.status||"draft"]+";font-weight:700'>"+SL[p.status||"draft"]+"</span>"+
+        "<span style='font-size:10px;color:"+(isOverdue?"#f09a9a":isSoon?"#f0c040":"var(--tx3)")+"'>"+(isOverdue?"Overdue":daysLeft===0?"Today":daysLeft+" days")+"</span>"+
+      "</div>";
+    }).join("")+"</div>";
+  })()}
+</div>
+
+buildDataInputSection("calendar","Calendar & Canva")}
+
+<div class="card" style="margin-bottom:11px;border-left:3px solid var(--purple)">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
+    <div>
+      <div class="cl" style="margin-bottom:2px;color:var(--purple)">📁 Creator Draft Uploads — from Creator Dashboard</div>
+      <div style="font-size:9px;color:var(--tx2)">Video and image drafts uploaded in the creator dashboard pending review</div>
+    </div>
+    <a href="https://creator-dashboard-v4xe.onrender.com" target="_blank" class="btno bsm" style="text-decoration:none;font-size:9px">Open Dashboard ↗</a>
+  </div>
+  ${(()=>{
+    const draftPosts=getDraftPosts().filter(p=>p.thumbnail&&!p.postUrl);
+    if(!draftPosts.length) return \`<div style="font-size:10px;color:var(--tx3);padding:8px 0">No draft uploads yet — upload video or image drafts in the Creator Dashboard (📁 Draft button)</div>\`;
+    const fmt2=n=>Number(n)>=1e6?(Number(n)/1e6).toFixed(1)+"M":Number(n)>=1e3?Math.round(Number(n)/1e3)+"K":String(Number(n)||"–");
+    const SC={draft:"#888",review:"#f0c040",approved:"#4caf50",live:"#a855f7"};
+    const SL={draft:"📝 Draft",review:"⏳ In Review",approved:"✓ Approved",live:"🟣 Live"};
+    return \`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">\${draftPosts.map(p=>\`
+      <div style="background:var(--bg3);border:1px solid var(--bdr);border-radius:10px;overflow:hidden">
+        <div style="height:120px;background:#000;position:relative;overflow:hidden">
+          <img src="\${p.thumbnail}" style="width:100%;height:100%;object-fit:cover;opacity:.85" onerror="this.style.display='none'">
+          <div class="tag" style="position:absolute;top:7px;right:7px;background:\${SC[p.status||"draft"]}22;color:\${SC[p.status||"draft"]};border:.5px solid \${SC[p.status||"draft"]}44">\${SL[p.status||"draft"]}</div>
+          <div style="position:absolute;top:7px;left:7px;background:rgba(0,0,0,.7);border-radius:5px;padding:2px 7px;font-size:9px;color:#fff;font-weight:700">📁 DRAFT</div>
+        </div>
+        <div style="padding:9px 11px">
+          <div style="font-size:11px;font-weight:700;color:#69C9D0">\${p.handle?"@"+p.handle:"No handle"}</div>
+          \${p.deliverableDate?\`<div style="font-size:10px;color:var(--tx3);margin-top:2px">📅 Due: \${p.deliverableDate}</div>\`:""}
+          \${p.notes?\`<div style="font-size:10px;color:var(--tx2);margin-top:4px;line-height:1.5">\${p.notes.substring(0,60)}\${p.notes.length>60?"…":""}</div>\`:""}
+          \${p.budget&&Number(p.budget)>0?\`<div style="font-size:10px;color:#c8a96e;margin-top:4px;font-weight:700">💰 \$\${Number(p.budget).toLocaleString()}</div>\`:""}
+          \${(p.threadComments||[]).length?\`<div style="font-size:10px;color:var(--tx3);margin-top:4px">💬 \${p.threadComments.length} comment\${p.threadComments.length!==1?"s":""}</div>\`:""}
+        </div>
+      </div>\`).join("")}
+    </div>\`;
+  })()}
+</div>
+
+${buildDataInputSection("drafts","Content Drafts")}`;}
 
 window.openCalDraft=d=>{
   const ev=CAL[d];if(!ev||!ev.cap)return;
@@ -2452,6 +3041,641 @@ function pgPartners(){
 }
 
 // ═══ CAMPAIGN REPORT + VIRAL — standalone pages ═══
+function pgCampaignReport(){
+  const camps=CAMPAIGNS_DATA||[];
+  return `
+<!-- Campaign Selector -->
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+  <select id="camp-report-select" onchange="switchCampaignReport(this.value)"
+    style="background:var(--bg3);border:1px solid var(--bdr);border-radius:7px;padding:7px 12px;font-size:11px;color:var(--tx);font-family:'DM Mono',monospace;cursor:pointer;flex:1;min-width:200px;max-width:340px">
+    <option value="all">📊 All Campaigns — Overview</option>
+    ${camps.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
+  </select>
+  <div style="display:flex;gap:5px;flex-wrap:wrap">
+    <button onclick="switchCampaignReport('all')" class="chip" style="font-size:9px">All</button>
+    ${camps.map(c=>`<button onclick="switchCampaignReport('${c.id}');document.getElementById('camp-report-select').value='${c.id}'" class="chip" style="font-size:9px;border-color:${c.color}44;color:${c.color}">${c.name.split(' ').slice(0,2).join(' ')}</button>`).join('')}
+  </div>
+</div>
+
+<!-- Upload/data panel -->
+<div class="card" style="margin-bottom:11px;border:1px dashed var(--purple)55">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <div class="cl" style="margin-bottom:0;color:var(--purple)">📎 Add Data to This Dashboard</div>
+    <button onclick="document.getElementById('cr-upload-panel').style.display=document.getElementById('cr-upload-panel').style.display==='none'?'block':'none'" class="btno bsm" style="font-size:8px">+ Add</button>
+  </div>
+  <div id="cr-upload-panel" style="display:none;margin-top:10px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      <label style="padding:5px 10px;border-radius:7px;border:1px solid var(--bdr);background:var(--bg3);color:var(--tx2);font-family:'Syne',sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+        📷 Screenshots <input type="file" accept="image/*" multiple style="display:none" onchange="addCampDashUpload(this)">
+      </label>
+      <label style="padding:5px 10px;border-radius:7px;border:1px solid var(--bdr);background:var(--bg3);color:var(--tx2);font-family:'Syne',sans-serif;font-size:9px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+        📄 Documents <input type="file" accept=".pdf,.csv,.xlsx,.doc,.docx" multiple style="display:none" onchange="addCampDashUpload(this)">
+      </label>
+      <a href="https://drive.google.com" target="_blank" class="btno bsm" style="text-decoration:none;font-size:9px">📁 Google Drive ↗</a>
+      <button onclick="sendDashToJessi()" class="btn bsm" style="font-size:9px">✦ Send All to Jessi</button>
+    </div>
+    <textarea class="inp" id="cr-data-paste" placeholder="Paste Sony DSRP numbers, Luminate data, ChartEx export, streaming stats — any format. Jessi reads everything." style="width:100%;min-height:65px;font-size:9px;resize:vertical;margin-bottom:7px"></textarea>
+    <div id="cr-uploads-preview" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+  </div>
+</div>
+
+<div id="camp-report-content">loading...</div>`;
+}
+
+// upload state for campaign dashboard
+const crUploads=[];
+window.addCampDashUpload=(input)=>{
+  const files=Array.from(input.files||[]);
+  const preview=document.getElementById('cr-uploads-preview');
+  files.forEach(file=>{
+    const entry={name:file.name,type:file.type,size:file.size};
+    crUploads.push(entry);
+    if(file.type.startsWith('image/')){
+      const r=new FileReader();
+      r.onload=e=>{
+        entry.dataUrl=e.target.result;
+        if(preview){
+          const d=document.createElement('div');
+          d.style.cssText='position:relative;display:inline-block';
+          d.innerHTML='<img src="'+e.target.result+'" style="height:65px;border-radius:6px;border:1px solid var(--bdr);object-fit:cover">'+
+            '<div style="font-size:8px;color:var(--tx2);text-align:center;margin-top:2px">'+file.name.substring(0,16)+'</div>';
+          preview.appendChild(d);
+        }
+      };
+      r.readAsDataURL(file);
+    } else {
+      if(preview){
+        const d=document.createElement('div');
+        d.style.cssText='padding:6px 10px;background:var(--bg3);border:1px solid var(--bdr);border-radius:6px;font-size:9px;color:var(--tx2)';
+        d.textContent='📄 '+file.name;
+        preview.appendChild(d);
+      }
+    }
+  });
+  input.value='';
+};
+
+window.sendDashToJessi=()=>{
+  const paste=document.getElementById('cr-data-paste')?.value?.trim()||'';
+  const ctx=buildFullCampaignContext();
+  const imgs=crUploads.filter(u=>u.dataUrl);
+  if(imgs.length) jessiImages=imgs.map(u=>({type:'image/jpeg',data:u.dataUrl,name:u.name}));
+  go('ai');
+  setTimeout(()=>{
+    if(typeof setJessiMode==='function')setJessiMode('coverage');
+    const inp=document.getElementById('ai-inp');
+    if(inp)inp.value='Analyze all of this campaign dashboard data and generate a full coverage report:\n\n'+ctx+(paste?'\n\nADDITIONAL DATA:\n'+paste:'')+(imgs.length?'\n\n['+imgs.length+' screenshot(s) attached]':'');
+    setTimeout(aiSend,100);
+  },300);
+};
+
+window.switchCampaignReport=(campId)=>{
+  const el=document.getElementById('camp-report-content');
+  const sel=document.getElementById('camp-report-select');
+  if(sel)sel.value=campId;
+  if(!el)return;
+  const totalSpent=budgetData?budgetData.lines.reduce((a,b)=>a+b.spent,0):17100;
+  el.innerHTML=campId==='all'?buildAllCampsView(totalSpent):buildSingleCampView(campId);
+};
+
+// ── Editable top posts state (persisted in memory) ──
+let topPosts=[
+  {id:'p1',plat:'Instagram',handle:'@aliciakeys x @karolg',type:'Collab Reel (AK owned)',views:'32.9M',likes:'1.6M',url:'https://www.instagram.com/aliciakeys/',trend:'🔥 #1 Driver',postType:'owned'},
+  {id:'p2',plat:'TikTok',handle:'@tsaone_mamogale',type:'Creator Cover',views:'261.6K',likes:'49K',url:'https://www.tiktok.com/search?q=alicia+keys+try+sleeping',trend:'🔥 Viral',postType:'creator'},
+  {id:'p3',plat:'Instagram',handle:'@mtvla',type:'Repost',views:'363K',likes:'18.4K',url:'https://www.instagram.com/mtvla/',trend:'⬆️ Strong',postType:'seeding'},
+  {id:'p4',plat:'Instagram',handle:'@mujer.es_',type:'Fan Page',views:'224K',likes:'5.4K',url:'https://www.instagram.com/mujer.es_/',trend:'⬆️ Growing',postType:'organic'},
+  {id:'p5',plat:'Instagram',handle:'@fmdos',type:'Fan Page',views:'183K',likes:'12.7K',url:'https://www.instagram.com/fmdos/',trend:'⬆️ Latin',postType:'organic'},
+  {id:'p6',plat:'Instagram',handle:'@yosoymolusco',type:'Music Page',views:'–',likes:'27.9K',url:'https://www.instagram.com/yosoymolusco/',trend:'⬆️ Latin',postType:'seeding'},
+];
+
+// Posts from content calendar (owned + creator posts that went live)
+function getCalendarPosts(){
+  if(typeof CAL==='undefined')return[];
+  return Object.entries(CAL).filter(([d,ev])=>ev.st==='approved').map(([d,ev])=>({
+    id:'cal-'+d,plat:ev.t==='influencer'?'TikTok':'Instagram',handle:'@aliciakeys',
+    type:'Calendar: '+ev.l,views:'–',likes:'–',url:'',trend:'📅 Scheduled/Live',
+    postType:ev.t,cap:ev.cap
+  }));
+}
+
+function buildAllCampsView(totalSpent){
+  const totalBudget=budgetData?budgetData.total:45000;
+  const camps=CAMPAIGNS_DATA||[];
+  const calPosts=getCalendarPosts();
+  const allPosts=[...topPosts,...calPosts];
+
+  return `
+<!-- KPIs -->
+<div class="g4" style="margin-bottom:11px">
+  ${kpi("Total Campaign Reach","43.9M+","Collab reel 34.1M + 9.8M tracked","#c8a96e",null)}
+  ${kpi("Worldwide Streaming","+21%","Spotify +24% · Apple +22%","#1DB954",null)}
+  ${kpi("Latin Streaming","+59%","Spotify +66% · Shazam +221%","#E1306C",null)}
+  ${kpi("TikTok Creates","4,370","Try Sleeping · 14 days","#69C9D0",null)}
+</div>
+
+<!-- Streaming breakdown -->
+<div class="g2" style="margin-bottom:11px">
+  <div class="card">
+    <div class="cl">🌍 Worldwide Streaming (3/20–3/26)</div>
+    ${[["All Streaming","620.2K","+21%","#c8a96e"],["Spotify","339.1K","+24%","#1DB954"],["Apple Music","208.4K","+22%","#FC3C44"],["Pandora","37.4K","+2%","#888"],["Amazon Unlimited","17.2K","+5%","#00A8E0"],["Shazam","7.1K","+22%","#f0e68c"],["TikTok Views","4.5M","+34%","#69C9D0"],["Vevo","277.6K","+17%","#FF0000"],["YouTube","94.3K","+11%","#FF0000"]].map(([l,v,p,c])=>`
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #080818">
+      <span style="font-size:10px;color:var(--tx2)">${l}</span>
+      <div style="display:flex;gap:10px">
+        <span style="font-size:11px;color:var(--tx)">${v}</span>
+        <span style="font-size:11px;font-weight:700;color:${c}">${p}</span>
+      </div>
+    </div>`).join('')}
+  </div>
+  <div class="card">
+    <div class="cl">🌎 Latin Market (3/20–3/26) <span class="bge" style="background:#E1306C14;color:#E1306C;border:1px solid #E1306C28">+59%</span></div>
+    ${[["All Streaming","42.6K","+59%","#E1306C"],["Spotify","33.7K","+66%","#1DB954"],["Apple Music","6.3K","+49%","#FC3C44"],["Deezer","1.1K","+40%","#A238FF"],["Amazon Unlimited","745","+2%","#00A8E0"],["Shazam Latin","90","+221%","#f0e68c"],["TikTok Views","420.4K","+24%","#69C9D0"],["Vevo Latin","52.8K","+22%","#FF0000"],["YouTube Latin","6.2K","+29%","#FF0000"]].map(([l,v,p,c])=>`
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #080818">
+      <span style="font-size:10px;color:var(--tx2)">${l}</span>
+      <div style="display:flex;gap:10px">
+        <span style="font-size:11px;color:var(--tx)">${v}</span>
+        <span style="font-size:11px;font-weight:700;color:${c}">${p}</span>
+      </div>
+    </div>`).join('')}
+  </div>
+</div>
+
+<!-- Budget + Creators row -->
+<div class="g4" style="margin-bottom:11px">
+  <div class="card" style="border-top:2px solid var(--purple)44">
+    <div class="cl">Budget <button onclick="go('budget')" class="btno bsm" style="font-size:8px;padding:1px 5px;margin-left:4px">→</button></div>
+    <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--purple)">$${totalSpent.toLocaleString()}</div>
+    <div style="font-size:9px;color:var(--tx2)">of $${totalBudget.toLocaleString()} total</div>
+    <div style="height:3px;background:var(--bg2);border-radius:2px;margin-top:7px">
+      <div style="width:${Math.min(Math.round(totalSpent/totalBudget*100),100)}%;height:100%;background:var(--purple);border-radius:2px"></div>
+    </div>
+  </div>
+  <div class="card" style="border-top:2px solid #69C9D044">
+    <div class="cl">Creators <button onclick="go('crm')" class="btno bsm" style="font-size:8px;padding:1px 5px;margin-left:4px">→ CRM</button></div>
+    <div style="font-family:'Playfair Display',serif;font-size:22px;color:#69C9D0">${crmData?crmData.length:5}</div>
+    <div style="font-size:9px;color:var(--tx2)">${crmData?crmData.filter(c=>c.st==='contracted').length:2} contracted · ${crmData?crmData.filter(c=>c.st==='draft review').length:1} in review</div>
+  </div>
+  <div class="card" style="border-top:2px solid #1DB95444">
+    <div class="cl">Spotify <button onclick="go('dsp')" class="btno bsm" style="font-size:8px;padding:1px 5px;margin-left:4px">→ DSP</button></div>
+    <div style="font-family:'Playfair Display',serif;font-size:22px;color:#1DB954">36.6M</div>
+    <div style="font-size:9px;color:var(--tx2)">monthly listeners · +8.3%</div>
+  </div>
+  <div class="card" style="border-top:2px solid #69C9D044">
+    <div class="cl">TikTok <button onclick="go('chartex')" class="btno bsm" style="font-size:8px;padding:1px 5px;margin-left:4px">→ ChartEx</button></div>
+    <div style="font-family:'Playfair Display',serif;font-size:22px;color:#69C9D0">4,370</div>
+    <div style="font-size:9px;color:var(--tx2)">Try Sleeping creates · 1.1M views</div>
+  </div>
+</div>
+
+<!-- Top Performing Posts — editable -->
+<div class="card" style="margin-bottom:11px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div>
+      <div class="cl" style="margin-bottom:2px">Top Performing Posts <span class="bge" style="background:var(--purple)14;color:var(--purple);border:1px solid var(--purple)28">Editable</span></div>
+      <div style="font-size:9px;color:var(--tx3)">🔵 Owned (AK) · 🟢 Creator posts · 🟡 Seeding · ⚪ Organic · 📅 From Calendar</div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button onclick="addTopPost()" class="btn bsm" style="font-size:9px">+ Add Post</button>
+      <button onclick="togglePostEdit()" class="btno bsm" id="post-edit-btn" style="font-size:9px">✏️ Edit</button>
+    </div>
+  </div>
+  <div id="top-posts-view">
+    ${renderTopPostsView(allPosts)}
+  </div>
+  <div id="top-posts-edit" style="display:none">
+    ${renderTopPostsEdit(topPosts)}
+  </div>
+</div>
+
+<!-- Social Listening + Sentiment -->
+<div class="card" style="margin-bottom:11px">
+  <div class="cl" style="margin-bottom:9px">💬 Social Listening & Sentiment <span class="bge bge-wait">Brand24 — coming soon</span></div>
+  <div class="g4" style="margin-bottom:9px">
+    ${kpi("Sentiment","94% Positive","post-campaign","#a8f0c8",null)}
+    ${kpi("Total Mentions","~2.4M est.","30 days","#c8a96e","wait")}
+    ${kpi("Top Hashtag","#ConCoraGala","43.9M reach","#69C9D0",null)}
+    ${kpi("Viral Narrative","Full-Circle Moment","Karol G 16yr journey","#c8a96e",null)}
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:9px">
+    ${["#AliciaKeys","#KarolG","#ConCoraGala","#TrySleeping","#Plentiful","#PushaT","#HellsKitchenBroadway","#LaAurora"].map(t=>`<span class="pill" style="background:var(--purple)14;color:var(--purple);border:1px solid var(--purple)28;font-size:9px">${t}</span>`).join('')}
+  </div>
+  <div style="font-size:10px;color:var(--tx2);line-height:2;padding:9px;background:var(--bg3);border-radius:7px;border:1px solid var(--bdr)">
+    <strong style="color:var(--tx)">Key narratives people are saying:</strong><br>
+    "Karol G and Alicia Keys — a full-circle moment 16 years in the making" · "Try Sleeping with a Broken Heart hits different in 2026" · 
+    "The piano performance everyone is talking about" · "Male emotional covers are taking over TikTok" · 
+    "AK x Karol G is the cross-genre collab nobody knew they needed" · "Hell's Kitchen Broadway sold out — iconic"<br><br>
+    <span style="color:var(--tx3)">Connect Brand24 for real-time mentions from Instagram, TikTok, YouTube, Reddit, News, Podcasts, LinkedIn and more</span>
+  </div>
+</div>
+
+<!-- Key Insights & Narratives -->
+<div class="card" style="margin-bottom:11px">
+  <div class="cl" style="margin-bottom:9px">💡 Key Insights & Narratives</div>
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+    ${[
+      ["🎬 Collab Reel = #1 Driver","32.9M views · 1.6M likes. Highest performing owned post. Sparked global amplification across music pages. Latin music pages amplified at +3x normal rate.","#c8a96e"],
+      ["🌎 Latin Market Overperformed","+59% vs +21% global. Karol G audience crossover confirmed. Shazam Latin +221% — discovery signal. New Latin audience segment unlocked for future targeting.","#E1306C"],
+      ["📈 Male Creator Cover Trend","@tsaone_mamogale 261.6K views · 49K likes in 3 days. Emotional male piano covers of Try Sleeping going viral. This creator archetype should be scaled immediately.","#1DB954"],
+      ["💫 Full-Circle Narrative Drives Organic","Karol G 16-year journey with AK story drove organic distribution without paid push. Emotional storytelling consistently outperforms promotional content.","#f0e68c"],
+      ["🎵 Social → Streaming Conversion Confirmed","TikTok creates and Spotify streams moved in lockstep. Spotify follower spike: +6,045 on Mar 23 (+93.6% vs avg). Direct TikTok → DSP pipeline proven.","#69C9D0"],
+      ["🌍 Global Reach: Kenya · S. Africa · UK · US · LatAm","AK catalog has evergreen global pull. Con Cora Gala unlocked Latin America as a high-engagement market. Target with Spanish-language content next.","#a8f0c8"],
+    ].map(([t,d,c])=>`
+    <div style="background:var(--bg3);border-radius:8px;padding:11px;border-left:3px solid ${c}44">
+      <div style="font-size:11px;font-weight:700;font-family:'Syne',sans-serif;color:${c};margin-bottom:4px">${t}</div>
+      <div style="font-size:10px;color:var(--tx2);line-height:1.8">${d}</div>
+    </div>`).join('')}
+  </div>
+</div>
+
+<!-- Campaign cards overview -->
+<div class="card" style="margin-bottom:11px">
+  <div class="cl" style="margin-bottom:9px">📋 Campaign Overview <button onclick="go('campaigns')" class="btno bsm" style="font-size:8px;margin-left:6px">→ Campaign Manager</button></div>
+  <div class="g3">
+    ${(CAMPAIGNS_DATA||[]).map(c=>`
+    <div style="background:var(--bg3);border-radius:8px;padding:10px;border-left:3px solid ${c.color};cursor:pointer" onclick="switchCampaignReport('${c.id}');document.getElementById('camp-report-select').value='${c.id}'">
+      <div style="font-weight:700;font-size:11px;font-family:'Syne',sans-serif;color:${c.color};margin-bottom:3px">${c.name} →</div>
+      <div style="font-size:10px;color:var(--tx2);margin-bottom:7px">${c.goal}</div>
+      <div style="height:3px;background:var(--bg2);border-radius:2px;margin-bottom:4px">
+        <div style="width:${c.budget>0?Math.min(Math.round(c.spent/c.budget*100),100):0}%;height:100%;background:${c.color};border-radius:2px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px">
+        <span style="color:var(--tx2)">$${c.spent.toLocaleString()} / $${c.budget.toLocaleString()}</span>
+        <span style="color:${c.color};font-weight:700">${c.status}</span>
+      </div>
+    </div>`).join('')}
+  </div>
+</div>
+
+${buildCreatorCampReport()}
+${buildCommandCenter()}${buildDataInputSection("campaignreport","Campaign Report")}`;
+}
+
+function buildSingleCampView(campId){
+  const c=(CAMPAIGNS_DATA||[]).find(x=>x.id===campId);
+  if(!c)return'<div class="card">Campaign not found</div>';
+  const campBudgetLines=(budgetData?.lines||[]).filter(l=>l.camp===c.name);
+  const campSpent=campBudgetLines.reduce((a,b)=>a+b.spent,0)||c.spent;
+  const campCreators=(crmData||[]).filter(cr=>cr.camp===c.name||cr.camp===c.id);
+  const calPosts=getCalendarPosts().filter(p=>p.postType===c.type||p.type.includes(c.name.split(' ')[0]));
+  const campPostsAll=[...topPosts.filter(p=>p.handle.includes(c.name.split(' ')[0].toLowerCase())||campCreators.some(cr=>p.handle.includes(cr.h))),...calPosts];
+
+  return `
+<div class="card" style="border-left:4px solid ${c.color};margin-bottom:11px">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+    <div>
+      <div style="font-family:'Playfair Display',serif;font-size:20px;color:${c.color}">${c.name}</div>
+      <div style="font-size:11px;color:var(--tx2);margin-top:3px">${c.goal}</div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:2px">Sound: <strong style="color:var(--tx)">${c.sound}</strong> · Platforms: ${(c.platforms||[]).join(', ')} · ${c.start}–${c.end}</div>
+    </div>
+    <span class="pill" style="background:${c.color}18;color:${c.color};border:1px solid ${c.color}30;flex-shrink:0">${c.status}</span>
+  </div>
+  <div class="g4" style="margin-bottom:10px">
+    ${[["Budget","$"+c.budget.toLocaleString(),"var(--purple)"],["Spent","$"+campSpent.toLocaleString(),"#a8f0c8"],["Remaining","$"+(c.budget-campSpent).toLocaleString(),"var(--tx2)"],["Creators",(campCreators.length||c.creators.length)+" active","#69C9D0"]].map(([l,v,col])=>`
+    <div style="background:var(--bg3);border-radius:7px;padding:9px">
+      <div style="font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2);margin-bottom:3px;font-weight:700;font-family:'Syne',sans-serif">${l}</div>
+      <div style="font-family:'Playfair Display',serif;font-size:17px;color:${col}">${v}</div>
+    </div>`).join('')}
+  </div>
+  <div style="height:5px;background:var(--bg2);border-radius:3px">
+    <div style="width:${c.budget>0?Math.min(Math.round(campSpent/c.budget*100),100):0}%;height:100%;background:${c.color};border-radius:3px"></div>
+  </div>
+</div>
+
+${Object.keys(c.kpis||{}).length?`
+<div class="g4" style="margin-bottom:11px">
+  ${Object.entries(c.kpis||{}).map(([k,v])=>`
+  <div class="card" style="border-top:2px solid ${c.color}33">
+    <div class="cl" style="color:${c.color}">${k}</div>
+    <div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--tx)">${v}</div>
+  </div>`).join('')}
+</div>`:''}
+
+${campCreators.length?`
+<div class="card" style="margin-bottom:11px">
+  <div class="cl">Creators on This Campaign <button onclick="go('crm')" class="btno bsm" style="font-size:8px;margin-left:6px">→ CRM</button></div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+    ${campCreators.map(cr=>`<div style="padding:7px 11px;background:var(--bg3);border:1px solid var(--bdr);border-radius:8px">
+      <div style="font-size:11px;font-weight:700;color:#69C9D0;font-family:'Syne',sans-serif">${cr.n}</div>
+      <div style="font-size:9px;color:var(--tx2);margin-top:2px">${cr.h} · ${cr.plat} · ${cr.fol} · ${cr.fee}</div>
+      <div style="font-size:9px;margin-top:2px"><span class="pill" style="background:#a8f0c814;color:#a8f0c8;border:1px solid #a8f0c820;font-size:8px">${cr.st}</span></div>
+    </div>`).join('')}
+  </div>
+</div>`:`<div class="card" style="margin-bottom:11px"><div class="cl">Creators</div><div style="font-size:11px;color:var(--tx2);margin-top:5px">${(c.creators||[]).join(' · ')}</div></div>`}
+
+${campBudgetLines.length?`
+<div class="card" style="margin-bottom:11px">
+  <div class="cl">Budget Lines <button onclick="go('budget')" class="btno bsm" style="font-size:8px;margin-left:6px">→ Budget Tracker</button></div>
+  <div style="overflow-x:auto;margin-top:8px"><table>
+    <thead><tr><th>Line Item</th><th>Budget</th><th>Spent</th><th>Remaining</th><th>Status</th></tr></thead>
+    <tbody>${campBudgetLines.map(l=>`<tr class="trow">
+      <td style="font-size:11px">${l.name}</td>
+      <td style="font-family:'Playfair Display',serif;font-size:15px">$${l.total.toLocaleString()}</td>
+      <td style="font-family:'Playfair Display',serif;font-size:15px;color:#a8f0c8">$${l.spent.toLocaleString()}</td>
+      <td style="font-family:'Playfair Display',serif;font-size:15px;color:var(--tx2)">$${(l.total-l.spent).toLocaleString()}</td>
+      <td><span class="pill" style="background:#a8f0c814;color:#a8f0c8;border:1px solid #a8f0c820;font-size:9px">${l.st}</span></td>
+    </tr>`).join('')}</tbody>
+  </table></div>
+</div>`:''}
+
+<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:11px">
+  <button onclick="jessiCampaignReport('${c.id}')" class="btn bsm">✦ Generate Full Report via Jessi</button>
+  <button onclick="jessiCreatorOpps()" class="btno bsm">→ Creator Opportunities</button>
+  <button onclick="go('campaigns')" class="btno bsm">→ Campaign Manager</button>
+  <button onclick="go('crm')" class="btno bsm">→ CRM</button>
+  <button onclick="switchCampaignReport('all')" class="btno bsm">← All Campaigns</button>
+</div>`;
+}
+
+// ── Top posts render + edit ──
+function renderTopPostsView(posts){
+  const typeColors={owned:'#a07fd4',creator:'#1DB954',seeding:'#69C9D0',organic:'#f0e68c','📅 Scheduled/Live':'#c8a96e'};
+  const typeDots={owned:'🔵',creator:'🟢',seeding:'🟡',organic:'⚪'};
+  return `<div style="overflow-x:auto"><table>
+    <thead><tr><th>Type</th><th>Platform</th><th>Handle / Account</th><th>Content Type</th><th>Views</th><th>Likes</th><th>Trend</th><th>↗</th></tr></thead>
+    <tbody>${posts.map(p=>`<tr class="trow" onclick="${p.url?`window.open('${p.url}','_blank')`:''}">
+      <td>${typeDots[p.postType]||'⚪'}</td>
+      <td>${pill({Instagram:'#E1306C',TikTok:'#69C9D0',YouTube:'#FF0000'}[p.plat]||'#888',p.plat)}</td>
+      <td style="font-weight:700;font-size:11px;color:#69C9D0">${p.handle}</td>
+      <td style="font-size:10px;color:var(--tx2)">${p.type}</td>
+      <td style="font-family:'Playfair Display',serif;font-size:15px;color:var(--gold)">${p.views}</td>
+      <td style="font-family:'Playfair Display',serif;font-size:15px">${p.likes}</td>
+      <td style="font-size:10px;color:#a8f0c8;font-weight:700">${p.trend}</td>
+      <td onclick="event.stopPropagation()">${p.url?`<a href="${p.url}" target="_blank" class="dl" style="color:#69C9D0">↗</a>`:'-'}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderTopPostsEdit(posts){
+  return `<div style="font-size:10px;color:var(--tx2);margin-bottom:8px">Edit any field below — changes save instantly</div>`+
+  posts.map((p,i)=>`
+  <div style="display:grid;grid-template-columns:100px 110px 140px 120px 80px 80px 80px 1fr 28px;gap:5px;margin-bottom:6px;align-items:center;padding:6px;background:var(--bg3);border-radius:7px">
+    <select style="background:var(--bg);border:1px solid var(--bdr);border-radius:5px;padding:4px 6px;font-size:9px;color:var(--tx);font-family:'DM Mono',monospace" onchange="topPosts[${i}].postType=this.value;topPosts[${i}].plat=this.options[this.selectedIndex].dataset.plat||topPosts[${i}].plat;refreshTopPosts()">
+      ${['owned','creator','seeding','organic'].map(t=>`<option value="${t}" ${p.postType===t?'selected':''}>${{owned:'🔵 Owned',creator:'🟢 Creator',seeding:'🟡 Seeding',organic:'⚪ Organic'}[t]}</option>`).join('')}
+    </select>
+    <select style="background:var(--bg);border:1px solid var(--bdr);border-radius:5px;padding:4px 6px;font-size:9px;color:var(--tx);font-family:'DM Mono',monospace" onchange="topPosts[${i}].plat=this.value;refreshTopPosts()">
+      ${['Instagram','TikTok','YouTube','X/Twitter','Facebook'].map(pl=>`<option value="${pl}" ${p.plat===pl?'selected':''}>${pl}</option>`).join('')}
+    </select>
+    <input class="ec" value="${p.handle}" style="font-size:10px" oninput="topPosts[${i}].handle=this.value" placeholder="@handle">
+    <input class="ec" value="${p.type}" style="font-size:10px" oninput="topPosts[${i}].type=this.value" placeholder="Content type">
+    <input class="ec" value="${p.views}" style="font-size:10px;text-align:right" oninput="topPosts[${i}].views=this.value" placeholder="Views">
+    <input class="ec" value="${p.likes}" style="font-size:10px;text-align:right" oninput="topPosts[${i}].likes=this.value" placeholder="Likes">
+    <input class="ec" value="${p.trend}" style="font-size:10px" oninput="topPosts[${i}].trend=this.value" placeholder="Trend">
+    <input class="ec" value="${p.url}" style="font-size:10px" oninput="topPosts[${i}].url=this.value" placeholder="URL (paste link)">
+    <button onclick="topPosts.splice(${i},1);refreshTopPosts()" style="background:none;border:none;color:#f09a9a;cursor:pointer;font-size:16px;padding:0;line-height:1">×</button>
+  </div>`).join('')+
+  `<button onclick="addTopPost()" class="btno bsm" style="margin-top:5px;width:100%">+ Add Post</button>`;
+}
+
+window.togglePostEdit=()=>{
+  const v=document.getElementById('top-posts-view');
+  const e=document.getElementById('top-posts-edit');
+  const btn=document.getElementById('post-edit-btn');
+  if(!v||!e)return;
+  const editing=e.style.display==='none';
+  v.style.display=editing?'none':'';
+  e.style.display=editing?'':'none';
+  if(btn)btn.textContent=editing?'👁 View':'✏️ Edit';
+};
+
+window.addTopPost=()=>{
+  topPosts.push({id:'p'+Date.now(),plat:'Instagram',handle:'',type:'',views:'',likes:'',url:'',trend:'',postType:'owned'});
+  refreshTopPosts();
+  const v=document.getElementById('top-posts-view');
+  const e=document.getElementById('top-posts-edit');
+  if(v)v.style.display='none';
+  if(e)e.style.display='';
+};
+
+window.refreshTopPosts=()=>{
+  const calPosts=getCalendarPosts();
+  const all=[...topPosts,...calPosts];
+  const v=document.getElementById('top-posts-view');
+  const e=document.getElementById('top-posts-edit');
+  if(v&&v.style.display!=='none')v.innerHTML=renderTopPostsView(all);
+  if(e&&e.style.display!=='none')e.innerHTML=renderTopPostsEdit(topPosts);
+};
+
+window.jessiCampaignReport=(id)=>{
+  const c=(CAMPAIGNS_DATA||[]).find(x=>x.id===id);
+  if(!c)return;
+  const ctx=buildFullCampaignContext();
+  go('ai');
+  setTimeout(()=>{
+    if(typeof setJessiMode==='function')setJessiMode('coverage');
+    const inp=document.getElementById('ai-inp');
+    if(inp)inp.value='Generate a full professional coverage report for: '+c.name+'\n\nCampaign: '+c.goal+' | Budget: $'+c.budget+' spent: $'+c.spent+' | Sound: '+c.sound+' | Platforms: '+(c.platforms||[]).join(', ')+'\n\nFull platform data:\n'+ctx;
+    setTimeout(aiSend,100);
+  },300);
+};
+
+
+function buildCreatorCampReport(){
+  const creatorCamps=getCreatorCampaigns();
+  const allPosts=getAllCreatorPosts();
+  if(!creatorCamps.length) return "";
+  const totalViews=allPosts.reduce((a,p)=>a+Number(p.views||0),0);
+  const totalLikes=allPosts.reduce((a,p)=>a+Number(p.likes||0),0);
+  const totalBudget=allPosts.reduce((a,p)=>a+Number(p.budget||0),0);
+  const livePosts=allPosts.filter(p=>p.status==="live");
+  const approvedPosts=allPosts.filter(p=>p.status==="approved");
+  const fmt2=n=>Number(n)>=1e6?(Number(n)/1e6).toFixed(1)+"M":Number(n)>=1e3?Math.round(Number(n)/1e3)+"K":String(Number(n)||"–");
+  const emv=totalViews*0.008;
+  const roi=totalBudget>0?((emv-totalBudget)/totalBudget*100):0;
+  return`
+<div class="card" style="margin-bottom:11px;border-left:3px solid var(--purple)">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
+    <div class="cl" style="margin-bottom:0;color:var(--purple)">🔗 Creator Dashboard — Campaign Performance</div>
+    <a href="https://creator-dashboard-v4xe.onrender.com" target="_blank" class="btno bsm" style="text-decoration:none;font-size:9px">Open Dashboard ↗</a>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:12px">
+    ${kpi("Creator Posts",allPosts.length,"total","var(--tx)",null)}
+    ${kpi("🟣 Live",livePosts.length,"posts","#69C9D0",null)}
+    ${kpi("Total Views",fmt2(totalViews),"creator posts","var(--gold)",null)}
+    ${kpi("Budget","$"+totalBudget.toLocaleString(),"committed","#c8a96e",null)}
+    ${kpi("Est. EMV","$"+Math.round(emv).toLocaleString(),"@$8 CPM","#a8f0c8",null)}
+    ${kpi("ROI",(roi>=0?"+":"")+roi.toFixed(0)+"%","vs budget",roi>=0?"#a8f0c8":"#f09a9a",null)}
+  </div>
+  ${creatorCamps.map(c=>{
+    const cPosts=getCreatorPosts(c.id);
+    const cViews=cPosts.reduce((a,p)=>a+Number(p.views||0),0);
+    const cBudget=cPosts.reduce((a,p)=>a+Number(p.budget||0),0);
+    const cLive=cPosts.filter(p=>p.status==="live").length;
+    const cApproved=cPosts.filter(p=>p.status==="approved").length;
+    return`<div style="padding:10px 12px;background:var(--bg3);border-radius:9px;border:1px solid var(--bdr);margin-bottom:7px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-weight:700;font-size:11px;color:var(--gold);font-family:'Syne',sans-serif">${c.name}</div>
+        <div style="display:flex;gap:5px">
+          ${cLive?`<span style="font-size:9px;padding:2px 7px;border-radius:10px;background:#a855f722;color:#a855f7;font-weight:700">🟣 ${cLive} live</span>`:""}
+          ${cApproved?`<span style="font-size:9px;padding:2px 7px;border-radius:10px;background:#4caf5022;color:#4caf50;font-weight:700">✓ ${cApproved} approved</span>`:""}
+          <a href="https://creator-dashboard-v4xe.onrender.com/#/campaign/${c.id}" target="_blank" class="dl" style="color:#69C9D0;font-size:9px">↗</a>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:10px">
+        <span><strong style="color:var(--tx)">${cPosts.length}</strong> <span style="color:var(--tx2)">posts</span></span>
+        <span><strong style="color:var(--gold)">${fmt2(cViews)}</strong> <span style="color:var(--tx2)">views</span></span>
+        <span><strong style="color:#c8a96e">$${cBudget.toLocaleString()}</strong> <span style="color:var(--tx2)">budget</span></span>
+        ${c.ttUrl?`<a href="${c.ttUrl}" target="_blank" style="color:#69C9D0;font-size:9px">TikTok Sound ↗</a>`:""}
+        ${c.igUrl?`<a href="${c.igUrl}" target="_blank" style="color:#E1306C;font-size:9px">IG Audio ↗</a>`:""}
+      </div>
+    </div>`;
+  }).join("")}
+</div>`;
+}
+
+function buildCommandCenter(){
+  return `<div class="card" style="background:linear-gradient(135deg,var(--purple-dim),var(--bg3));border-color:var(--purple)22">
+  <div class="cl" style="color:var(--purple);margin-bottom:12px">⚡ Campaign Command Center — all actions wired to the platform</div>
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+    ${[
+      ["📊 Full Coverage Report","Pulls creators, budget, streaming, TikTok, Sony data, ChartEx into one pro report","jessiFullReport()","var(--purple)"],
+      ["🎯 Creator Opportunities","Source creators based on male cover trend + Latin +59% spike","jessiCreatorOpps()","#69C9D0"],
+      ["📩 Write Newsletter","AK family newsletter in her warm personal voice","jessiNewsletter()","#a8f0c8"],
+      ["📄 Post-Campaign PDF","Executive summary — executive-ready for any stakeholder","jessiPostCampaign()","#f0e68c"],
+      ["🚀 Build Next Campaign","Ideate next campaign from what worked","jessiBuildCampaign()","#E1306C"],
+      ["🎬 Content Strategy","Shotlist + 2-week calendar + TikTok concepts","jessiContentStrat()","#9b59b6"],
+    ].map(([t,d,fn,col])=>`
+    <div style="background:var(--bg3);border-radius:9px;padding:11px;border:1px solid var(--bdr)">
+      <div style="font-size:10px;font-weight:700;font-family:'Syne',sans-serif;color:${col};margin-bottom:4px">${t}</div>
+      <div style="font-size:9px;color:var(--tx2);margin-bottom:8px;line-height:1.8">${d}</div>
+      <button onclick="${fn};go('ai')" class="btn bsm" style="width:100%;background:${col}33;color:${col};border:1px solid ${col}44">✦ Run</button>
+    </div>`).join('')}
+  </div>
+</div>`;
+}
+
+
+
+window.sendReportToJessi=()=>{
+  const txt=document.getElementById("report-paste")?.value?.trim();
+  if(!txt){alert("Paste Sony/DSP data first then click Send");return;}
+  go("ai");setTimeout(()=>{if(jessiMode!=="coverage")setJessiMode("coverage");const inp=document.getElementById("ai-inp");if(inp)inp.value="Analyze this campaign data — key insights, streaming trends, recommendations:\n\n"+txt;setTimeout(aiSend,100);},300);
+};
+window.jessiFullReport=()=>{
+  const ctx=buildFullCampaignContext();
+  go("ai");setTimeout(()=>{if(jessiMode!=="coverage")setJessiMode("coverage");const inp=document.getElementById("ai-inp");if(inp)inp.value=`Generate a full professional coverage report for Con Cora Gala × Karol G. Use this live platform data:\n${ctx}\n\nFormat: Executive Summary → Total Reach → Key Narratives (post handles + numbers) → Streaming Impact worldwide + Latin → TikTok Performance → Creator Performance → Budget Summary → Key Insights → Trends → Recommendations`;setTimeout(aiSend,100);},300);
+};
+window.jessiCreatorOpps=()=>{
+  const creators=crmData?crmData.map(c=>`${c.n} ${c.h} ${c.plat} ${c.fol} ${c.st}`).join(', '):'Jade Elia, DeeJ Music, Marcus Flow, Priya Sounds, Anika Creates';
+  go("ai");setTimeout(()=>{const inp=document.getElementById("ai-inp");if(inp)inp.value=`Based on the Con Cora Gala campaign — male cover trend (261.6K views, 49K likes @tsaone_mamogale) + Latin +59% — identify 10 specific creator opportunities to source RIGHT NOW.\n\nCurrent CRM: ${creators}\n\nFor each: creator archetype, platform, follower range, sound to use, pitch angle, estimated reach. Focus on: male emotional covers of Try Sleeping, Latin creators for Karol G crossover, piano/acoustic covers. Format as a list I can immediately add to the Creator CRM.`;setTimeout(aiSend,100);},300);
+};
+window.jessiNewsletter=()=>{
+  go("ai");setTimeout(()=>{const inp=document.getElementById("ai-inp");if(inp)inp.value=`Write an Alicia Keys family newsletter about the Con Cora Gala moment with Karol G. AK's warm personal spiritual voice — calls fans "family." Include: the magic of the performance, global reach 43.9M+, +59% Latin streaming surge, Try Sleeping creator wave (4,370 creates), and a forward look. Intimate not promotional. 400-600 words. Sign off as AK.`;setTimeout(aiSend,100);},300);
+};
+window.jessiPostCampaign=()=>{
+  const ctx=buildFullCampaignContext();
+  go("ai");setTimeout(()=>{const inp=document.getElementById("ai-inp");if(inp)inp.value=`Write a professional post-campaign PDF-ready report for Con Cora Gala × Karol G.\n\nData: ${ctx}\n\nFormat: Campaign Overview → Objectives → Results (all platform data + % changes) → Top Content Performers (handles + numbers) → Creator Summary → Budget Summary → Key Wins → Learnings → Recommendations for Next Campaign. Executive-ready, specific numbers, clean headers.`;setTimeout(aiSend,100);},300);
+};
+window.jessiBuildCampaign=()=>{
+  go("ai");setTimeout(()=>{const inp=document.getElementById("ai-inp");if(inp)inp.value=`Based on what worked in the Con Cora Gala campaign, build the next AK campaign plan:\n- Try Sleeping still trending (4,370 creates) — extend?\n- Plentiful ft. Pusha T only 695 creates — huge untapped potential\n- Latin market +59% — Karol G audience needs follow-up\n- Male emotional cover trend is viral\n\nDeliver: campaign name, goal, sound to push, 3-5 creator archetypes to source, platforms, timeline (Apr–May 2026), budget recommendation, KPIs. Format ready to add to Campaign Manager.`;setTimeout(aiSend,100);},300);
+};
+window.jessiContentStrat=()=>{
+  go("ai");setTimeout(()=>{const inp=document.getElementById("ai-inp");if(inp)inp.value=`Build a content strategy + shotlist from the Con Cora Gala campaign wins:\n\nTop performers: Collab Reel 32.9M views 1.6M likes | Male cover @tsaone_mamogale 261.6K views 49K likes | Latin pages 183K-363K views\n\nDeliver: (1) 2-week content calendar with post types, captions, sounds per day (2) Shotlist for AK's next appearance — specific shots, concepts, references, timing (3) 3 TikTok concepts for Try Sleeping that creators can execute. Format ready to add to Content Calendar.`;setTimeout(aiSend,100);},300);
+};
+
+function pgViral(){
+  return`
+<div class="an">🔬 Paste any TikTok or Instagram link → Jessi analyzes why it went viral → extract formula for AK content. Use ⬇️ to download TikTok videos without watermark. Viral formula library builds your AK playbook.</div>
+
+<!-- NO-WATERMARK DOWNLOAD PANEL -->
+<div class="card" style="margin-bottom:11px;border-left:3px solid #69C9D0">
+  <div class="cl" style="color:#69C9D0;margin-bottom:8px">⬇️ TikTok Download — No Watermark <span class="bge" style="background:#69C9D014;color:#69C9D0;border:1px solid #69C9D028">via Scraptik</span></div>
+  <div style="font-size:10px;color:var(--tx2);margin-bottom:10px">Paste any TikTok URL or video ID → download the video without TikTok watermark for internal use</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+    <input class="inp" id="nwm-url" placeholder="https://www.tiktok.com/@handle/video/7493156277590428974…" style="flex:1">
+    <button class="btn" onclick="downloadNoWatermark()">⬇️ Get Download Link</button>
+  </div>
+  <div id="nwm-result"></div>
+</div>
+
+<!-- ANALYZE A POST -->
+<div class="card" style="margin-bottom:11px">
+  <div class="cl" style="margin-bottom:8px">🔗 Analyze a Post — Paste Short-Form Link</div>
+  <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+    <input class="inp" id="viral-url" placeholder="Paste TikTok, Instagram Reel, or YouTube Short URL…" style="flex:1;min-width:220px" oninput="updateViralPreview()">
+    <select class="inp" id="viral-plat" style="width:120px"><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>Twitter/X</option></select>
+    <button class="btn bsm" onclick="pullViralPostMetrics()" style="font-size:9px">📊 Pull Live Metrics</button>
+  </div>
+  <div id="viral-url-preview" style="margin-bottom:8px"></div>
+  <div id="viral-live-metrics" style="margin-bottom:8px"></div>
+  <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+    <input class="inp" id="viral-views" placeholder="Views (e.g. 261.6K)" style="width:100px">
+    <input class="inp" id="viral-likes" placeholder="Likes (e.g. 49K)" style="width:100px">
+    <input class="inp" id="viral-shares" placeholder="Shares/Saves" style="width:100px">
+    <input class="inp" id="viral-handle" placeholder="@handle" style="width:100px">
+    <input class="inp" id="viral-song" placeholder="Sound used (if any)" style="flex:1;min-width:120px">
+  </div>
+  <textarea class="inp" id="viral-desc" placeholder="Describe the post — what was it about? Hook, format, visual, what made it different?" style="min-height:80px;resize:vertical;margin-bottom:8px"></textarea>
+  <div style="display:flex;gap:7px;flex-wrap:wrap">
+    <button class="btn" onclick="analyzeViral()">🔬 Analyze Viral Formula</button>
+    <button class="btno bsm" onclick="analyzeViral(true)">⚡ Quick</button>
+  </div>
+</div>
+<div id="viral-result" style="margin-bottom:11px"></div>
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div class="cl" style="margin-bottom:0">📚 Viral Formula Playbook <span style="font-size:9px;color:var(--tx3);font-weight:400;text-transform:none;letter-spacing:0">${viralDB.length} formulas saved</span></div>
+    ${viralDB.length?`<button class="btno bsm" onclick="exportViral()">Export Playbook</button>`:""}
+  </div>
+  <div id="viral-db">
+    ${viralDB.length===0?`<div style="text-align:center;padding:20px"><div style="font-size:24px;margin-bottom:8px">🔬</div><div style="font-size:12px;color:var(--tx2)">Analyze posts above to build your formula database</div></div>`:renderViralDB()}
+  </div>
+</div>
+${buildDataInputSection("viral","Viral Analyzer")}`;
+}
+
+window.downloadNoWatermark=async()=>{
+  const urlEl=document.getElementById("nwm-url");
+  const url=urlEl?.value?.trim()||"";
+  const el=document.getElementById("nwm-result");
+  if(!url||!el)return;
+  el.innerHTML=`<div class="loading">Fetching no-watermark link…</div>`;
+  // Extract video ID
+  const vid=url.match(/video\/([\d]{10,25})/)?.[1]||url.match(/\/([\d]{15,25})$/)?.[1]||url.replace(/\D/g,"").slice(0,19);
+  if(!vid){el.innerHTML=`<div class="err">Could not extract video ID from URL</div>`;return;}
+  try{
+    const r=await fetch("/api/tt-no-watermark?aweme_id="+vid);
+    const d=await r.json();
+    const videoUrl=d?.aweme_detail?.video?.play_addr?.url_list?.[0]
+      ||d?.data?.play||d?.video_url||d?.url||null;
+    if(videoUrl){
+      el.innerHTML=`<div style="padding:12px;background:var(--bg3);border:1px solid #69C9D033;border-radius:9px">
+        <div style="font-size:11px;color:#69C9D0;font-weight:700;margin-bottom:8px">✅ No-watermark video ready</div>
+        <div style="font-size:10px;color:var(--tx2);margin-bottom:8px;word-break:break-all">${videoUrl.substring(0,80)}…</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <a href="${videoUrl}" target="_blank" class="btn bsm" style="text-decoration:none">▶ Play Video ↗</a>
+          <a href="${videoUrl}" download class="btno bsm" style="text-decoration:none">⬇️ Download</a>
+          <button onclick="navigator.clipboard?.writeText('${videoUrl}');this.textContent='✓ Copied'" class="btno bsm">📋 Copy URL</button>
+        </div>
+        <div style="font-size:9px;color:var(--tx3);margin-top:7px">For internal use only · Do not redistribute</div>
+      </div>`;
+    }else{
+      el.innerHTML=`<div class="err">No download URL found in response. The video may be private, deleted, or the API rate limit was hit.<br><small>${JSON.stringify(d).substring(0,200)}</small></div>`;
+    }
+  }catch(e){el.innerHTML=`<div class="err">Error: ${e.message} — check RAPID_KEY in Render</div>`;}
+};
+
+window.pullViralPostMetrics=async()=>{
+  const url=document.getElementById("viral-url")?.value?.trim();
+  const el=document.getElementById("viral-live-metrics");
+  if(!url||!el)return;
+  el.innerHTML=`<div class="loading">Pulling live metrics…</div>`;
+  const metrics=await window.fetchPostMetrics?.(url);
+  if(metrics){
+    const fmt2=n=>Number(n)>=1e6?(Number(n)/1e6).toFixed(1)+"M":Number(n)>=1e3?Math.round(Number(n)/1e3)+"K":String(Number(n)||"–");
+    // Pre-fill the manual fields
+    if(metrics.views){const v=document.getElementById("viral-views");if(v)v.value=fmt2(metrics.views);}
+    if(metrics.likes){const l=document.getElementById("viral-likes");if(l)l.value=fmt2(metrics.likes);}
+    if(metrics.author){const h=document.getElementById("viral-handle");if(h)h.value="@"+metrics.author;}
+    el.innerHTML=`<div style="display:flex;gap:8px;align-items:center;padding:9px 12px;background:var(--bg3);border:1px solid #69C9D033;border-radius:8px;flex-wrap:wrap">
+      <span style="font-size:10px;font-weight:700;color:#69C9D0">📊 Live Metrics</span>
+      ${metrics.thumb?`<img src="/api/proxy-image?url=${encodeURIComponent(metrics.thumb)}" style="height:40px;border-radius:5px;object-fit:cover" onerror="this.style.display='none'">`:``}
+      ${[["Views",metrics.views,"var(--gold)"],["Likes",metrics.likes,"var(--tx)"],["Comments",metrics.comments,"var(--tx)"],["Saves",metrics.saves,"var(--tx)"]].map(([l,v,c])=>v!=null?`<div style="text-align:center"><div style="font-family:'Playfair Display',serif;font-size:16px;color:${c}">${fmt2(v)}</div><div style="font-size:9px;color:var(--tx3)">${l}</div></div>`:"").join("")}
+      <div style="font-size:10px;color:#69C9D0;margin-left:auto">✅ Metrics pre-filled below</div>
+    </div>`;
+  }else{
+    el.innerHTML=`<div style="font-size:10px;color:var(--tx3);padding:7px">Could not fetch live metrics — fill in manually below</div>`;
+  }
+};
+
 function pgCampaignReport(){
   const camps=CAMPAIGNS_DATA||[];
   return `
@@ -4316,43 +5540,72 @@ document.addEventListener('DOMContentLoaded', function(){
 console.log('[AK PATCH] Drive buttons fixed · Sony panel · CR sections · 7-day persistence · drag+drop ready');
 })();
 </script>
-
-
-<!-- ═══ PATCH: Drive bar at bottom only + iPhone nav ═══ -->
+<!-- ═══ AK INTELLIGENCE MASTER PATCH v3 ═══
+  1. Drive bar: static at bottom
+  2. Nav toggle: works every tab (clones element to reset listeners)
+  3. Hash routing: /#/overview /#/crm /#/budget-tracker
+  4. JSONBin sync: auto-save/load all data
+  5. RapidAPI: live metrics, sound creates, creator search
+  6. Creator Dashboard: cross-bin data pull
+  7. Shareable link copy button
+═══════════════════════════════════════════ -->
 <style>
-/* Drive bar: just sits at page bottom, only see it when scrolled there */
-#wm-fixed-bar{display:none!important}
+#wm-fixed-bar{display:none!important;pointer-events:none!important}
 .main{padding-bottom:20px!important}
 .pg>.drive-bar{display:flex!important}
 .drive-bar:not(#wm-fixed-bar .drive-bar){display:flex!important}
-.drive-bar{
-  position:static!important;
-  bottom:auto!important;
-  margin-top:18px;
-  border-radius:9px!important;
-}
-
-/* Mobile header: show tabs, shrink logo */
+.drive-bar{position:static!important;bottom:auto!important;background:var(--bg2)!important;border-top:1px solid var(--bdr)!important;border-radius:9px!important;margin-top:18px!important}
 @media(max-width:600px){
   .hdr{padding:0 6px!important}
   .logo-nm{display:none!important}
-  .logo-ak{font-size:10px!important}
-  .htab{padding:3px 6px!important;font-size:8px!important}
+  .htab{padding:3px 5px!important;font-size:8px!important}
   .hdr-r{display:none!important}
-}
-
-/* Mobile sidebar: mob-open overrides collapsed */
-@media(max-width:600px){
   .sidebar{width:0!important;overflow:hidden!important;position:fixed!important;height:100vh!important;top:0!important;left:0!important;z-index:200!important}
   .sidebar.mob-open{width:166px!important;overflow-y:auto!important}
-  .sidebar.mob-open *{display:revert!important}
   .sidebar.mob-open .sg{display:block!important}
-  .sidebar.mob-open .si{display:flex!important}
-  .sidebar.mob-open .sb-bottom{display:block!important}
+  .sidebar.mob-open .si,.sidebar.mob-open .sb-bottom{display:flex!important}
 }
+.wm-link-btn{background:none;border:1px solid var(--bdr);border-radius:5px;color:var(--tx2);cursor:pointer;padding:3px 7px;font-size:10px;margin-left:6px;transition:all .14s}
+.wm-link-btn:hover{border-color:var(--purple);color:var(--purple)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:300;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.modal{background:#08081a;border:1px solid var(--bdr);border-radius:12px;padding:22px;max-width:600px;width:92%;max-height:88vh;overflow-y:auto}
 </style>
 <script>
 (function(){
+'use strict';
+
+// ── HASH ROUTING
+var ROUTE_MAP={
+  'overview':'overview','platforms':'platforms','dsp':'dsp',
+  'catalogue':'catalogue','chartex':'chartex',
+  'campaign-report':'campaignreport','campaignreport':'campaignreport',
+  'viral':'viral','listening':'listening','jessi':'ai','ai':'ai',
+  'campaigns':'campaigns','crm':'crm','creators':'crm',
+  'budget':'budget','budget-tracker':'budget',
+  'calendar':'calendar','drafts':'drafts',
+  'contracts':'contracts','partners':'partners'
+};
+function _getRoute(){var h=location.hash.replace('#/','').replace('#','').toLowerCase().trim();return ROUTE_MAP[h]||null;}
+function _setRoute(id){var h='#/'+id;if(location.hash!==h)history.replaceState(null,'',h);}
+function _patchGo(){
+  if(typeof window.go==='function'&&!window.go._akv3){
+    var _o=window.go;
+    window.go=function(id){_o(id);_setRoute(id);setTimeout(_bindNav,90);};
+    window.go._akv3=true;
+  }
+}
+window.addEventListener('load',function(){
+  _patchGo();
+  var r=_getRoute();
+  if(r){if(typeof window.go==='function')window.go(r);else setTimeout(function(){_patchGo();if(typeof window.go==='function')window.go(r);},400);}
+  setTimeout(_bindNav,600);
+  _addLinkBtn();
+  // Load creator data on startup
+  if(typeof window.loadCreatorData==='function') window.loadCreatorData();
+});
+window.addEventListener('hashchange',function(){var r=_getRoute();if(r&&typeof window.go==='function')window.go(r);});
+
+// ── NAV TOGGLE — clone element to reset all listeners on every tab change
 window.toggleSidebar=function(){
   var sb=document.getElementById('sidebar');
   var btn=document.getElementById('sb-toggle');
@@ -4363,26 +5616,19 @@ window.toggleSidebar=function(){
     var open=sb.classList.contains('mob-open');
     if(open){
       sb.classList.remove('mob-open');
-      if(btn)btn.textContent='☰';
-      if(tog)tog.innerHTML='&#9776;';
+      if(btn)btn.textContent='☰';if(tog)tog.innerHTML='&#9776;';
     }else{
       sb.classList.add('mob-open');
-      if(btn)btn.textContent='✕';
-      if(tog)tog.innerHTML='✕';
-      function close(e){
+      if(btn)btn.textContent='✕';if(tog)tog.innerHTML='✕';
+      function oc(e){
         var t=e.target||e.srcElement;
         if(!sb.contains(t)&&t!==btn&&t!==tog){
           sb.classList.remove('mob-open');
-          if(btn)btn.textContent='☰';
-          if(tog)tog.innerHTML='&#9776;';
-          document.removeEventListener('touchstart',close);
-          document.removeEventListener('click',close);
+          if(btn)btn.textContent='☰';if(tog)tog.innerHTML='&#9776;';
+          document.removeEventListener('touchstart',oc);document.removeEventListener('click',oc);
         }
       }
-      setTimeout(function(){
-        document.addEventListener('touchstart',close,{passive:true});
-        document.addEventListener('click',close,{passive:true});
-      },100);
+      setTimeout(function(){document.addEventListener('touchstart',oc,{passive:true});document.addEventListener('click',oc,{passive:true});},150);
     }
   }else{
     var col=sb.classList.toggle('collapsed');
@@ -4391,19 +5637,139 @@ window.toggleSidebar=function(){
     localStorage.setItem('wm_sb_col',col?'1':'0');
   }
 };
-function bind(){
+
+function _bindNav(){
+  // Clone to reset ALL existing listeners — fixes "only works once" bug
   ['sb-toggle','hdr-nav-toggle'].forEach(function(id){
-    var el=document.getElementById(id);
-    if(el&&!el.dataset.b){
-      el.dataset.b='1';
-      el.addEventListener('touchend',function(e){e.preventDefault();e.stopPropagation();window.toggleSidebar();},{passive:false});
-      el.addEventListener('click',function(e){e.stopPropagation();window.toggleSidebar();});
-    }
+    var el=document.getElementById(id);if(!el||!el.parentNode)return;
+    var clone=el.cloneNode(true);
+    el.parentNode.replaceChild(clone,el);
+    clone.addEventListener('touchend',function(e){e.preventDefault();e.stopPropagation();window.toggleSidebar();},{passive:false});
+    clone.addEventListener('click',function(e){e.stopPropagation();window.toggleSidebar();});
   });
   if(window.innerWidth<=600){var sb=document.getElementById('sidebar');if(sb)sb.classList.remove('collapsed');}
 }
-if(typeof renderPage==='function'){var _r=window.renderPage;window.renderPage=function(){_r.apply(this,arguments);setTimeout(bind,80);};}
-setTimeout(bind,400);
+
+function _hookRender(){
+  if(typeof renderPage==='function'&&!window.renderPage._v3){
+    var _rp=window.renderPage;
+    window.renderPage=function(){
+      _rp.apply(this,arguments);
+      if(typeof CUR!=='undefined')_setRoute(CUR);
+      setTimeout(_bindNav,120);
+    };
+    window.renderPage._v3=true;
+  }
+}
+_hookRender();
+document.addEventListener('DOMContentLoaded',function(){_hookRender();_patchGo();setTimeout(_bindNav,700);});
+
+// ── SHAREABLE LINK BUTTON
+function _addLinkBtn(){
+  var hdr=document.querySelector('.hdr-r');
+  if(!hdr||hdr.querySelector('.wm-link-btn'))return;
+  var btn=document.createElement('button');
+  btn.className='wm-link-btn';btn.innerHTML='🔗';btn.title='Copy shareable link to this tab';
+  btn.onclick=function(){
+    var url=location.origin+location.pathname+location.hash;
+    navigator.clipboard&&navigator.clipboard.writeText(url).catch(function(){});
+    if(typeof showGDriveToast==='function')showGDriveToast('🔗 Link copied: '+url);
+    btn.innerHTML='✓';setTimeout(function(){btn.innerHTML='🔗';},1800);
+  };
+  hdr.appendChild(btn);
+}
+
+// ── JSONBIN SYNC
+var _jbs=false,_jbq=null;
+window.jbSave=async function(data){
+  if(_jbs){_jbq=data;return;}_jbs=true;
+  try{await fetch('/jb/ak',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}
+  catch(e){console.warn('[JB]',e.message);}
+  _jbs=false;if(_jbq){var q=_jbq;_jbq=null;window.jbSave(q);}
+};
+window.jbLoad=async function(){
+  try{var r=await fetch('/jb/ak');if(!r.ok)return null;return await r.json();}catch(e){return null;}
+};
+window.jbLoadCreator=async function(){
+  try{var r=await fetch('/jb/creator');if(!r.ok)return null;return await r.json();}catch(e){return null;}
+};
+
+// Auto-save every 30s
+setInterval(function(){
+  var d={};
+  if(typeof CAMPAIGNS_DATA!=='undefined')d.campaigns=CAMPAIGNS_DATA;
+  if(typeof crmData!=='undefined')d.crm=crmData;
+  if(typeof budgetData!=='undefined')d.budget=budgetData;
+  if(typeof aiHist!=='undefined')d.aiHist=aiHist.slice(-50);
+  if(typeof viralDB!=='undefined')d.viralDB=viralDB;
+  if(typeof window.sonyData!=='undefined')d.sonyData=window.sonyData;
+  if(typeof contractsData!=='undefined')d.contracts=contractsData;
+  if(typeof DRAFTS_DATA!=='undefined')d.drafts=DRAFTS_DATA;
+  if(typeof window._dataSections!=='undefined')d.dataSections=window._dataSections;
+  if(Object.keys(d).length)window.jbSave(d);
+},30000);
+
+// Restore on load
+window.addEventListener('load',async function(){
+  var saved=await window.jbLoad();
+  if(!saved)return;
+  try{
+    if(saved.campaigns&&typeof CAMPAIGNS_DATA!=='undefined')CAMPAIGNS_DATA.splice(0,CAMPAIGNS_DATA.length,...saved.campaigns);
+    if(saved.crm&&typeof crmData!=='undefined')crmData.splice(0,crmData.length,...saved.crm);
+    if(saved.viralDB&&typeof viralDB!=='undefined')viralDB.splice(0,viralDB.length,...saved.viralDB);
+    if(saved.sonyData&&window.sonyData)window.sonyData.splice(0,window.sonyData.length,...saved.sonyData);
+    if(saved.contracts&&typeof contractsData!=='undefined')contractsData.splice(0,contractsData.length,...saved.contracts);
+    if(saved.drafts&&typeof DRAFTS_DATA!=='undefined')DRAFTS_DATA.splice(0,DRAFTS_DATA.length,...saved.drafts);
+    if(saved.dataSections&&window._dataSections){Object.assign(window._dataSections,saved.dataSections);localStorage.setItem('wm_data_sections',JSON.stringify(window._dataSections));}
+    if(saved.aiHist&&typeof aiHist!=='undefined'&&!aiHist.length)saved.aiHist.forEach(function(m){aiHist.push(m);});
+    console.log('[JB] Restored data from JSONBin');
+  }catch(e){console.warn('[JB] restore:',e.message);}
+});
+
+// ── LIVE POST METRICS (RapidAPI via server)
+window.fetchPostMetrics=async function(postUrl){
+  if(!postUrl)return null;
+  try{
+    var isTT=postUrl.includes('tiktok.com');
+    var isIG=postUrl.includes('instagram.com');
+    if(isTT){
+      var vid=postUrl.match(/video\/(\d{10,25})/)?.[1];if(!vid)return null;
+      var r=await fetch('/api/tt-post?videoId='+vid+'&videoUrl='+encodeURIComponent(postUrl));
+      var d=await r.json();
+      var v=d?.itemInfo?.itemStruct||d?.data||d;
+      var st=v?.stats||v?.statistics||{};
+      return{platform:'tiktok',views:st.playCount||st.play_count||0,likes:st.diggCount||st.digg_count||0,
+        comments:st.commentCount||st.comment_count||0,shares:st.shareCount||st.share_count||0,
+        thumb:v?.video?.cover||null,author:v?.author?.uniqueId||null};
+    }
+    if(isIG){
+      var r2=await fetch('/api/ig-post?postUrl='+encodeURIComponent(postUrl));
+      var d2=await r2.json();
+      var items=d2?.data?.items||d2?.items||[];var item=items[0]||d2?.data||d2;
+      if(!item)return null;
+      return{platform:'instagram',views:item.view_count||0,likes:item.like_count||0,
+        comments:item.comment_count||0,saves:item.saved_count||0,
+        thumb:item.image_versions2?.candidates?.[0]?.url||null,author:item.user?.username||null};
+    }
+  }catch(e){console.warn('[METRICS]',e.message);}
+  return null;
+};
+
+// ── SOUND CREATES
+window.fetchSoundCreates=async function(ttMid,igAid){
+  var res={};
+  if(ttMid){try{var r=await fetch('/api/tt-music?musicId='+ttMid);var d=await r.json();var m=d?.data?.music_info||d?.music_info||d?.data||d;res.tt={videoCount:m?.video_count||m?.videoCount||null,title:m?.title||null};}catch(e){}}
+  if(igAid){try{var r2=await fetch('/api/ig-music?audioId='+igAid);var d2=await r2.json();res.ig={mediaCount:d2?.media_count||null,title:d2?.title||null};}catch(e){}}
+  return res;
+};
+
+// ── CREATOR SEARCH (Scraptik)
+window.searchCreators=async function(keyword){
+  try{var r=await fetch('/api/scraptik-search-users?keyword='+encodeURIComponent(keyword));return await r.json();}
+  catch(e){console.warn('[SEARCH]',e.message);return null;}
+};
+
+console.log('[AK v3] All systems loaded: hash routing + nav fix + JSONBin + RapidAPI + Creator Dashboard');
 })();
 </script>
 </body>
